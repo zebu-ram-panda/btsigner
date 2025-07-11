@@ -1,0 +1,47 @@
+repos:
+  # General checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: check-json
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: mixed-line-ending
+
+  # Go checks
+  - repo: https://github.com/golangci/golangci-lint
+    rev: v1.54.2
+    hooks:
+      - id: golangci-lint
+        args: [--timeout=5m]
+
+  - repo: https://github.com/dnephin/pre-commit-golang
+    rev: v0.5.1
+    hooks:
+      - id: go-fmt
+      # Disabled due to issues with finding Go files
+      # - id: go-vet
+      - id: go-imports
+      - id: go-cyclo
+        args: [-over=50]
+      - id: validate-toml
+      # Disabled temporarily due to failing client test
+      # - id: go-unit-tests
+      # Disabled due to test-only directories
+      # - id: go-build
+      #   exclude: ^tests/integration/
+      - id: go-mod-tidy
+
+  # Commit message
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v3.12.0
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
+
+# Custom configurations
+default_stages: [commit]

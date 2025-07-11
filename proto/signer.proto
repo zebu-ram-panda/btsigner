@@ -1,0 +1,84 @@
+syntax = "proto3";
+package btsigner.v1;
+
+option go_package = "github.com/bittensor-lab/btsigner/proto/signer/v1";
+
+import "google/protobuf/empty.proto";
+
+// RemoteSigner service definition
+service RemoteSigner {
+  // GetPublicKey returns the public key of the default signer
+  rpc GetPublicKey(google.protobuf.Empty) returns (GetPublicKeyResponse);
+
+  // GetPublicKeyByID returns the public key of a specific signer by ID
+  rpc GetPublicKeyByID(GetPublicKeyByIDRequest) returns (GetPublicKeyResponse);
+
+  // SignExtrinsic signs a payload with the default signer's private key
+  rpc SignExtrinsic(SignExtrinsicRequest) returns (SignExtrinsicResponse);
+
+  // SignExtrinsicWithKey signs a payload with a specific signer's private key
+  rpc SignExtrinsicWithKey(SignExtrinsicWithKeyRequest) returns (SignExtrinsicResponse);
+
+  // ListKeys returns a list of all available key IDs
+  rpc ListKeys(google.protobuf.Empty) returns (ListKeysResponse);
+
+  // Health returns the health status of the signer
+  rpc Health(google.protobuf.Empty) returns (google.protobuf.Empty);
+}
+
+// GetPublicKeyResponse contains the public key information
+message GetPublicKeyResponse {
+  // 32-byte compressed Ristretto point
+  bytes public_key = 1;
+
+  // SS58 address derived from public_key
+  string ss58_address = 2;
+
+  // Key ID
+  string key_id = 3;
+}
+
+// GetPublicKeyByIDRequest specifies which key ID to get
+message GetPublicKeyByIDRequest {
+  // Key ID to get public key for
+  string key_id = 1;
+}
+
+// SignExtrinsicRequest contains the payload to sign with the default key
+message SignExtrinsicRequest {
+  // SCALE-encoded payload to be signed
+  bytes payload = 1;
+
+  // Optional context for verification (nonce, era, etc.)
+  bytes context = 2;
+}
+
+// SignExtrinsicWithKeyRequest contains the payload to sign with a specific key
+message SignExtrinsicWithKeyRequest {
+  // Key ID to use for signing
+  string key_id = 1;
+
+  // SCALE-encoded payload to be signed
+  bytes payload = 2;
+
+  // Optional context for verification (nonce, era, etc.)
+  bytes context = 3;
+}
+
+// SignExtrinsicResponse contains the signature
+message SignExtrinsicResponse {
+  // 64-byte sr25519 signature
+  bytes signature = 1;
+
+  // Key ID used for signing
+  string key_id = 2;
+}
+
+// ListKeysResponse contains a list of all available key IDs
+message ListKeysResponse {
+  // List of key IDs
+  repeated string key_ids = 1;
+
+  // Default key ID (if set)
+  string default_key_id = 2;
+}
