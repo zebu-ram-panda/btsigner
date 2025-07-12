@@ -140,12 +140,12 @@ test_single_key_workflow() {
     # Step 2: Generate key
     print_step "Step 2: Generating key"
     BTSIGNER_PASSWORD="$DEMO_PASSWORD" BTSIGNER_CONFIRM_PASSWORD="$DEMO_PASSWORD" \
-        ../bin/btsigner --genkey --key "$DEMO_KEY_FILE"
+        ./bin/btsigner --genkey --key "$DEMO_KEY_FILE"
     print_success "Key generated: $DEMO_KEY_FILE"
     
     # Step 3: Verify key
     print_step "Step 3: Verifying key"
-    BTSIGNER_PASSWORD="$DEMO_PASSWORD" ../bin/btsigner --check-key --key "$DEMO_KEY_FILE"
+    BTSIGNER_PASSWORD="$DEMO_PASSWORD" ./bin/btsigner --check-key --key "$DEMO_KEY_FILE"
     print_success "Key verification completed"
     
     # Step 4: Create config
@@ -153,7 +153,7 @@ test_single_key_workflow() {
     
     # Step 5: Start server
     print_step "Step 5: Starting server"
-    BTSIGNER_PASSWORD="$DEMO_PASSWORD" ../bin/btsigner --config "$DEMO_CONFIG_FILE" > "$SERVER_LOG_FILE" 2>&1 &
+    BTSIGNER_PASSWORD="$DEMO_PASSWORD" ./bin/btsigner --config "$DEMO_CONFIG_FILE" > "$SERVER_LOG_FILE" 2>&1 &
     local server_pid=$!
     echo "$server_pid" > "$SERVER_PID_FILE"
     print_success "Server started with PID: $server_pid"
@@ -169,24 +169,24 @@ test_single_key_workflow() {
     
     # Get public key
     print_step "Step 7a: Getting public key"
-    ../bin/btclient --get-public-key
+    ./bin/btclient --get-public-key
     print_success "Public key retrieved successfully"
     
     # Test health check
     print_step "Step 7b: Testing health check"
-    ../bin/btclient --health
+    ./bin/btclient --health
     print_success "Health check passed"
     
     # Test signing
     print_step "Step 7c: Testing signing"
-    ../bin/btclient --sign 68656c6c6f20776f726c64  # "hello world" in hex
+    ./bin/btclient --sign 68656c6c6f20776f726c64  # "hello world" in hex
     print_success "Signing test passed"
     
     # Test multiple signatures for performance
     print_step "Step 7d: Testing multiple signatures (performance test)"
     local start_time=$(date +%s.%N)
     for i in {1..10}; do
-        ../bin/btclient --sign $(printf "%064x" $i) > /dev/null
+        ./bin/btclient --sign $(printf "%064x" $i) > /dev/null
     done
     local end_time=$(date +%s.%N)
     local duration=$(echo "$end_time - $start_time" | bc)
@@ -199,24 +199,12 @@ test_single_key_workflow() {
 test_keystore_workflow() {
     print_step "Testing Keystore Workflow"
     
-    # Step 1: Create keystore and generate keys
-    print_step "Step 1: Creating keystore and generating keys"
-    
-    # Generate multiple keys
-    local key_ids=("validator-key" "cold-key" "hot-key")
-    for key_id in "${key_ids[@]}"; do
-        print_step "Generating key: $key_id"
-        BTSIGNER_PASSWORD="$DEMO_PASSWORD" BTSIGNER_CONFIRM_PASSWORD="$DEMO_PASSWORD" \
-            ../bin/btsigner --genkey --keystore "$DEMO_KEYSTORE_DIR" --key-id "$key_id"
-        print_success "Generated key: $key_id"
-    done
-    
-    # Step 2: Stop single key server
-    print_step "Step 2: Stopping single key server"
+    # Step 1: Stop single key server
+    print_step "Step 1: Stopping single key server"
     cleanup
     
-    # Step 3: Create keystore config
-    print_step "Step 3: Creating keystore configuration"
+    # Step 2: Create keystore config
+    print_step "Step 2: Creating keystore configuration"
     cat > "$DEMO_CONFIG_FILE" << EOF
 server:
   address: ":$SERVER_PORT"
@@ -236,9 +224,21 @@ log:
   format: "json"
 EOF
     
+    # Step 3: Create keystore and generate keys
+    print_step "Step 3: Creating keystore and generating keys"
+    
+    # Generate multiple keys
+    local key_ids=("validator-key" "cold-key" "hot-key")
+    for key_id in "${key_ids[@]}"; do
+        print_step "Generating key: $key_id"
+        BTSIGNER_PASSWORD="$DEMO_PASSWORD" BTSIGNER_CONFIRM_PASSWORD="$DEMO_PASSWORD" \
+            ./bin/btsigner --config "$DEMO_CONFIG_FILE" --genkey --keystore "$DEMO_KEYSTORE_DIR" --key-id "$key_id"
+        print_success "Generated key: $key_id"
+    done
+    
     # Step 4: Start keystore server
     print_step "Step 4: Starting keystore server"
-    BTSIGNER_PASSWORD="$DEMO_PASSWORD" ../bin/btsigner --config "$DEMO_CONFIG_FILE" \
+    BTSIGNER_PASSWORD="$DEMO_PASSWORD" ./bin/btsigner --config "$DEMO_CONFIG_FILE" \
         --keystore "$DEMO_KEYSTORE_DIR" --key-id "validator-key" > "$SERVER_LOG_FILE" 2>&1 &
     local server_pid=$!
     echo "$server_pid" > "$SERVER_PID_FILE"
@@ -255,12 +255,12 @@ EOF
     
     # Get public key
     print_step "Step 6a: Getting public key from keystore"
-    ../bin/btclient --get-public-key
+    ./bin/btclient --get-public-key
     print_success "Public key retrieved from keystore"
     
     # Test signing with keystore
     print_step "Step 6b: Testing signing with keystore"
-    ../bin/btclient --sign 68656c6c6f20776f726c64  # "hello world" in hex
+    ./bin/btclient --sign 68656c6c6f20776f726c64  # "hello world" in hex
     print_success "Keystore signing test passed"
     
     print_success "Keystore workflow completed successfully!"
@@ -271,7 +271,7 @@ run_stress_test() {
     print_step "Running Stress Test"
     
     print_step "Running 5000 signature stress test"
-    ../bin/btclient --get-public-key > /dev/null  # Warmup
+    ./bin/btclient --get-public-key > /dev/null  # Warmup
     
     local start_time=$(date +%s.%N)
     local success_count=0
@@ -279,7 +279,7 @@ run_stress_test() {
     
     for i in {1..5000}; do
         local payload=$(printf "%064x" $i)
-        if ../bin/btclient --sign "$payload" > /dev/null 2>&1; then
+        if ./bin/btclient --sign "$payload" > /dev/null 2>&1; then
             success_count=$((success_count + 1))
         else
             error_count=$((error_count + 1))
