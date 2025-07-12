@@ -18,6 +18,15 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
+// KeyStoreSigner defines the interface for keystore-specific functionality
+type KeyStoreSigner interface {
+	signer.Signer
+	DefaultKeyID() string
+	ListKeyIDs() []string
+	GetPublicKeyByID(id string) ([]byte, string, error)
+	SignWithKey(ctx context.Context, id string, payload []byte) ([]byte, error)
+}
+
 // Server implements the RemoteSigner gRPC service
 type Server struct {
 	pb.UnimplementedRemoteSignerServer
@@ -87,7 +96,7 @@ func (s *Server) GetPublicKey(ctx context.Context, _ *emptypb.Empty) (*pb.GetPub
 
 	// Get key ID if available
 	keyID := ""
-	if ksSigner, ok := s.signer.(*signer.KeyStoreSigner); ok {
+	if ksSigner, ok := s.signer.(KeyStoreSigner); ok {
 		keyID = ksSigner.DefaultKeyID()
 		s.logger.Info("Using key",
 			zap.String("key_id", keyID),
@@ -108,7 +117,7 @@ func (s *Server) GetPublicKeyByID(ctx context.Context, req *pb.GetPublicKeyByIDR
 	}
 
 	// Check if we have a KeyStoreSigner
-	ksSigner, ok := s.signer.(*signer.KeyStoreSigner)
+	ksSigner, ok := s.signer.(KeyStoreSigner)
 	if !ok {
 		return nil, fmt.Errorf("keystore signer not available")
 	}
@@ -141,7 +150,7 @@ func (s *Server) SignExtrinsic(ctx context.Context, req *pb.SignExtrinsicRequest
 
 	// Check if we have a KeyStoreSigner
 	keyID := ""
-	if ksSigner, ok := s.signer.(*signer.KeyStoreSigner); ok {
+	if ksSigner, ok := s.signer.(KeyStoreSigner); ok {
 		keyID = ksSigner.DefaultKeyID()
 		s.logger.Info("Signing with default key", zap.String("key_id", keyID))
 	}
@@ -172,7 +181,7 @@ func (s *Server) SignExtrinsicWithKey(ctx context.Context, req *pb.SignExtrinsic
 	}
 
 	// Check if we have a KeyStoreSigner
-	ksSigner, ok := s.signer.(*signer.KeyStoreSigner)
+	ksSigner, ok := s.signer.(KeyStoreSigner)
 	if !ok {
 		return nil, fmt.Errorf("keystore signer not available")
 	}
@@ -195,7 +204,7 @@ func (s *Server) SignExtrinsicWithKey(ctx context.Context, req *pb.SignExtrinsic
 // ListKeys returns a list of all available key IDs
 func (s *Server) ListKeys(ctx context.Context, _ *emptypb.Empty) (*pb.ListKeysResponse, error) {
 	// Check if we have a KeyStoreSigner
-	ksSigner, ok := s.signer.(*signer.KeyStoreSigner)
+	ksSigner, ok := s.signer.(KeyStoreSigner)
 	if !ok {
 		// For single key signers, return empty list
 		return &pb.ListKeysResponse{

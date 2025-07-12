@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"testing"
+	"errors"
 
 	"github.com/bittensor-lab/btsigner/internal/config"
 	"github.com/bittensor-lab/btsigner/pkg/signer"
@@ -71,60 +72,181 @@ func (m *MockKeyStoreSigner) SignWithKey(ctx context.Context, id string, payload
 }
 
 func TestServerGetPublicKey(t *testing.T) {
-	// Create a mock signer
-	mockSigner := &MockSigner{
-		pubKey:   []byte("mock-public-key"),
-		ss58Addr: "5mock-ss58-address",
-		err:      nil,
-	}
-
 	// Create logger
 	logger, _ := zap.NewDevelopment()
 
-	// Create server
-	srv := NewServer(mockSigner, config.DefaultConfig(), logger)
+	// Test with a regular signer
+	t.Run("RegularSigner", func(t *testing.T) {
+		// Create a mock signer
+		mockSigner := &MockSigner{
+			pubKey:   []byte("mock-public-key"),
+			ss58Addr: "5mock-ss58-address",
+			err:      nil,
+		}
 
-	// Test GetPublicKey
-	resp, err := srv.GetPublicKey(context.Background(), &emptypb.Empty{})
-	if err != nil {
-		t.Fatalf("GetPublicKey failed: %v", err)
-	}
+		// Create server
+		srv := NewServer(mockSigner, config.DefaultConfig(), logger)
 
-	if string(resp.PublicKey) != "mock-public-key" {
-		t.Errorf("Expected public key 'mock-public-key', got '%s'", string(resp.PublicKey))
-	}
+		// Test GetPublicKey
+		resp, err := srv.GetPublicKey(context.Background(), &emptypb.Empty{})
+		if err != nil {
+			t.Fatalf("GetPublicKey failed: %v", err)
+		}
 
-	if resp.Ss58Address != "5mock-ss58-address" {
-		t.Errorf("Expected SS58 address '5mock-ss58-address', got '%s'", resp.Ss58Address)
-	}
+		if string(resp.PublicKey) != "mock-public-key" {
+			t.Errorf("Expected public key 'mock-public-key', got '%s'", string(resp.PublicKey))
+		}
+
+		if resp.Ss58Address != "5mock-ss58-address" {
+			t.Errorf("Expected SS58 address '5mock-ss58-address', got '%s'", resp.Ss58Address)
+		}
+		if resp.KeyId != "" {
+			t.Errorf("Expected empty KeyId, got %s", resp.KeyId)
+		}
+	})
+
+	// Test with a KeyStoreSigner
+	t.Run("KeyStoreSigner", func(t *testing.T) {
+		// Create a mock KeyStoreSigner
+		mockKeyStoreSigner := &MockKeyStoreSigner{
+			MockSigner: &MockSigner{
+				pubKey:   []byte("mock-keystore-public-key"),
+				ss58Addr: "5mock-keystore-ss58-address",
+				err:      nil,
+			},
+			mockDefaultKeyID: func() string { return "default-key-id" },
+		}
+
+		// Create server
+		srv := NewServer(mockKeyStoreSigner, config.DefaultConfig(), logger)
+
+		// Test GetPublicKey
+		resp, err := srv.GetPublicKey(context.Background(), &emptypb.Empty{})
+		if err != nil {
+			t.Fatalf("GetPublicKey failed: %v", err)
+		}
+
+		if string(resp.PublicKey) != "mock-keystore-public-key" {
+			t.Errorf("Expected public key 'mock-keystore-public-key', got '%s'", string(resp.PublicKey))
+		}
+
+		if resp.Ss58Address != "5mock-keystore-ss58-address" {
+			t.Errorf("Expected SS58 address '5mock-keystore-ss58-address', got '%s'", resp.Ss58Address)
+		}
+		if resp.KeyId != "default-key-id" {
+			t.Errorf("Expected KeyId 'default-key-id', got %s", resp.KeyId)
+		}
+	})
+
+	// Test error from signer
+	t.Run("SignerError", func(t *testing.T) {
+		// Create a mock signer that returns an error
+		mockSigner := &MockSigner{
+			err: errors.New("signer error"),
+		}
+
+		// Create server
+		srv := NewServer(mockSigner, config.DefaultConfig(), logger)
+
+		// Test GetPublicKey
+		_, err := srv.GetPublicKey(context.Background(), &emptypb.Empty{})
+		if err == nil {
+			t.Error("Expected error from GetPublicKey, got nil")
+		}
+		if err != nil && err.Error() != "signer error" {
+			t.Errorf("Expected 'signer error', got %v", err)
+		}
+	})
 }
 
 func TestServerSignExtrinsic(t *testing.T) {
-	// Create a mock signer
-	mockSigner := &MockSigner{
-		signature: []byte("mock-signature"),
-		err:       nil,
-	}
-
 	// Create logger
 	logger, _ := zap.NewDevelopment()
 
-	// Create server
-	srv := NewServer(mockSigner, config.DefaultConfig(), logger)
+	// Test with a regular signer
+	t.Run("RegularSigner", func(t *testing.T) {
+		// Create a mock signer
+		mockSigner := &MockSigner{
+			signature: []byte("mock-signature"),
+			err:       nil,
+		}
 
-	// Test SignExtrinsic
-	req := &pb.SignExtrinsicRequest{
-		Payload: []byte("test-payload"),
-	}
+		// Create server
+		srv := NewServer(mockSigner, config.DefaultConfig(), logger)
 
-	resp, err := srv.SignExtrinsic(context.Background(), req)
-	if err != nil {
-		t.Fatalf("SignExtrinsic failed: %v", err)
-	}
+		// Test SignExtrinsic
+		req := &pb.SignExtrinsicRequest{
+			Payload: []byte("test-payload"),
+		}
 
-	if string(resp.Signature) != "mock-signature" {
-		t.Errorf("Expected signature 'mock-signature', got '%s'", string(resp.Signature))
-	}
+		resp, err := srv.SignExtrinsic(context.Background(), req)
+		if err != nil {
+			t.Fatalf("SignExtrinsic failed: %v", err)
+		}
+
+		if string(resp.Signature) != "mock-signature" {
+			t.Errorf("Expected signature 'mock-signature', got '%s'", string(resp.Signature))
+		}
+		if resp.KeyId != "" {
+			t.Errorf("Expected empty KeyId, got %s", resp.KeyId)
+		}
+	})
+
+	// Test with a KeyStoreSigner
+	t.Run("KeyStoreSigner", func(t *testing.T) {
+		// Create a mock KeyStoreSigner
+		mockKeyStoreSigner := &MockKeyStoreSigner{
+			MockSigner: &MockSigner{
+				signature: []byte("mock-keystore-signature"),
+				err:       nil,
+			},
+			mockDefaultKeyID: func() string { return "default-key-id" },
+		}
+
+		// Create server
+		srv := NewServer(mockKeyStoreSigner, config.DefaultConfig(), logger)
+
+		// Test SignExtrinsic
+		req := &pb.SignExtrinsicRequest{
+			Payload: []byte("test-payload"),
+		}
+
+		resp, err := srv.SignExtrinsic(context.Background(), req)
+		if err != nil {
+			t.Fatalf("SignExtrinsic failed: %v", err)
+		}
+
+		if string(resp.Signature) != "mock-keystore-signature" {
+			t.Errorf("Expected signature 'mock-keystore-signature', got '%s'", string(resp.Signature))
+		}
+		if resp.KeyId != "default-key-id" {
+			t.Errorf("Expected KeyId 'default-key-id', got %s", resp.KeyId)
+		}
+	})
+
+	// Test error from signer
+	t.Run("SignerError", func(t *testing.T) {
+		// Create a mock signer that returns an error
+		mockSigner := &MockSigner{
+			err: errors.New("signer error"),
+		}
+
+		// Create server
+		srv := NewServer(mockSigner, config.DefaultConfig(), logger)
+
+		// Test SignExtrinsic
+		req := &pb.SignExtrinsicRequest{
+			Payload: []byte("test-payload"),
+		}
+
+		_, err := srv.SignExtrinsic(context.Background(), req)
+		if err == nil {
+			t.Error("Expected error from SignExtrinsic, got nil")
+		}
+		if err != nil && err.Error() != "signer error" {
+			t.Errorf("Expected 'signer error', got %v", err)
+		}
+	})
 }
 
 func TestServerHealth(t *testing.T) {
@@ -162,6 +284,9 @@ func TestServerEmptyPayload(t *testing.T) {
 	_, err := srv.SignExtrinsic(context.Background(), req)
 	if err == nil {
 		t.Error("Expected error with empty payload, got nil")
+	}
+	if err != nil && err.Error() != "payload cannot be empty" {
+		t.Errorf("Expected 'payload cannot be empty' error, got %v", err)
 	}
 }
 
@@ -267,16 +392,22 @@ func TestServerSignExtrinsicWithKey(t *testing.T) {
 	}
 
 	// Test SignExtrinsicWithKey with empty payload
-	_, err = srv.SignExtrinsicWithKey(context.Background(), &pb.SignExtrinsicWithKeyRequest{KeyId: keyID, Payload: []byte{}})
-	if err == nil {
-		t.Error("Expected error with empty payload, got nil")
-	}
+    _, err = srv.SignExtrinsicWithKey(context.Background(), &pb.SignExtrinsicWithKeyRequest{KeyId: keyID, Payload: []byte{}})
+    if err == nil {
+        t.Error("Expected error with empty payload, got nil")
+    }
+    if err != nil && err.Error() != "payload cannot be empty" {
+        t.Errorf("Expected 'payload cannot be empty' error, got %v", err)
+    }
 
-	// Test SignExtrinsicWithKey with empty key ID
-	_, err = srv.SignExtrinsicWithKey(context.Background(), &pb.SignExtrinsicWithKeyRequest{KeyId: "", Payload: payload})
-	if err == nil {
-		t.Error("Expected error with empty key ID, got nil")
-	}
+    // Test SignExtrinsicWithKey with empty key ID
+    _, err = srv.SignExtrinsicWithKey(context.Background(), &pb.SignExtrinsicWithKeyRequest{KeyId: "", Payload: payload})
+    if err == nil {
+        t.Error("Expected error with empty key ID, got nil")
+    }
+    if err != nil && err.Error() != "key_id cannot be empty" {
+        t.Errorf("Expected 'key_id cannot be empty' error, got %v", err)
+    }
 
 	// Test SignExtrinsicWithKey with non-keystore signer
 	srv = NewServer(&MockSigner{}, config.DefaultConfig(), logger) // Use a non-keystore signer

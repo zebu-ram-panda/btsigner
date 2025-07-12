@@ -87,6 +87,9 @@ func (kp *Sr25519KeyPair) PublicKey() []byte {
 
 // Sign signs a message using sr25519
 func (kp *Sr25519KeyPair) Sign(message []byte) ([]byte, error) {
+	if kp.secretKey == nil {
+		return nil, errors.New("nil secret key")
+	}
 	t := merlin.NewTranscript("substrate")
 	t.AppendMessage([]byte("sign-message"), message)
 

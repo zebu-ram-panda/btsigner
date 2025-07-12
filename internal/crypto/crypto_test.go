@@ -1,12 +1,12 @@
 package crypto
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
-	"testing"
-	"strings"
-	"encoding/json"
 	"path/filepath"
+	"strings"
+	"testing"
 )
 
 const (
@@ -209,8 +209,24 @@ func TestLoadSr25519KeyPairErrorCases(t *testing.T) {
 			t.Errorf("Expected ErrDecryptFailed, got: %v", err)
 		}
 	})
+}
 
-	
+func TestSr25519KeyPairSignErrorCases(t *testing.T) {
+	// Test Sign method with a nil secretKey
+	t.Run("SignWithNilSecretKey", func(t *testing.T) {
+		kp := &Sr25519KeyPair{
+			secretKey: nil, // Simulate a nil secret key
+			publicKey: []byte{1, 2, 3},
+		}
+		message := []byte("test message")
+		_, err := kp.Sign(message)
+		if err == nil {
+			t.Error("Expected error when signing with nil secret key, got nil")
+		}
+		if err != nil && !strings.Contains(err.Error(), "nil secret key") { // Assuming schnorrkel returns an error containing "nil secret key"
+			t.Errorf("Expected 'nil secret key' error, got: %v", err)
+		}
+	})
 }
 
 func TestGenerateKeyFileErrorCases(t *testing.T) {
