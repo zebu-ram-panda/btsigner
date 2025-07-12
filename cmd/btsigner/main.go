@@ -234,7 +234,9 @@ func main() {
 				logger.Fatal("Passwords do not match")
 			}
 
-			keyPair, err := crypto.GenerateKeyFile(cfg.Key.Path, password)
+			keyPair, err := crypto.GenerateKeyFile(cfg.Key.Path, func() (*crypto.SecureBytes, error) {
+				return crypto.NewSecureBytes(password), nil
+			})
 			if err != nil {
 				logger.Fatal("Failed to generate key", zap.Error(err))
 			}

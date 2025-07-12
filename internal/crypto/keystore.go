@@ -85,8 +85,9 @@ func (ks *KeyStore) saveMetadata() error {
 	return os.WriteFile(metadataPath, data, 0600)
 }
 
+
 // GenerateKey generates a new key with the given ID and password
-func (ks *KeyStore) GenerateKey(id string, password []byte) (*Sr25519KeyPair, error) {
+func (ks *KeyStore) GenerateKey(id string, passwordProvider func() (*SecureBytes, error)) (*Sr25519KeyPair, error) {
 	if id == "" {
 		return nil, ErrInvalidKeyID
 	}
@@ -109,7 +110,7 @@ func (ks *KeyStore) GenerateKey(id string, password []byte) (*Sr25519KeyPair, er
 	keyPath := filepath.Join(ks.basePath, keyFilename)
 
 	// Generate the key
-	keyPair, err := GenerateKeyFile(keyPath, password)
+	keyPair, err := GenerateKeyFile(keyPath, passwordProvider)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +131,7 @@ func (ks *KeyStore) GenerateKey(id string, password []byte) (*Sr25519KeyPair, er
 }
 
 // LoadKey loads a key with the given ID and password
-func (ks *KeyStore) LoadKey(id string, password []byte) (*Sr25519KeyPair, error) {
+func (ks *KeyStore) LoadKey(id string, passwordProvider func() (*SecureBytes, error)) (*Sr25519KeyPair, error) {
 	if id == "" {
 		return nil, ErrInvalidKeyID
 	}
@@ -151,9 +152,9 @@ func (ks *KeyStore) LoadKey(id string, password []byte) (*Sr25519KeyPair, error)
 
 	// Load the key
 	keyPath := filepath.Join(ks.basePath, keyFilename)
-	keyPair, err := LoadSr25519KeyPair(keyPath, password)
+	keyPair, err := LoadSr25519KeyPair(keyPath, passwordProvider)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to load key: %w", err)
 	}
 
 	// Store in memory
@@ -194,18 +195,18 @@ func (ks *KeyStore) DeleteKey(id string) error {
 		return ErrKeyIDNotFound
 	}
 
+	// Delete the key file
+	keyPath := filepath.Join(ks.basePath, keyFilename)
+	if err := os.Remove(keyPath); err != nil {
+		return fmt.Errorf("failed to delete key file: %w", err)
+	}
+
 	// Unload from memory if loaded
 	if keyPair, loaded := ks.keys[id]; loaded {
 		if err := keyPair.Zero(); err != nil {
 			return err
 		}
 		delete(ks.keys, id)
-	}
-
-	// Delete the key file
-	keyPath := filepath.Join(ks.basePath, keyFilename)
-	if err := os.Remove(keyPath); err != nil {
-		return fmt.Errorf("failed to delete key file: %w", err)
 	}
 
 	// Update metadata

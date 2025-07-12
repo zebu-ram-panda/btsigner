@@ -30,9 +30,12 @@ type Sr25519Signer struct {
 	keyPair *crypto.Sr25519KeyPair
 }
 
+
 // NewSr25519Signer creates a new sr25519 signer
 func NewSr25519Signer(keyPath string, password []byte) (*Sr25519Signer, error) {
-	keyPair, err := crypto.LoadSr25519KeyPair(keyPath, password)
+	keyPair, err := crypto.LoadSr25519KeyPair(keyPath, func() (*crypto.SecureBytes, error) {
+		return crypto.NewSecureBytes(password), nil
+	})
 	if err != nil {
 		return nil, err
 	}

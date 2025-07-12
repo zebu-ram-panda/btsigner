@@ -40,9 +40,12 @@ func (s *KeyStoreSigner) DefaultKeyID() string {
 	return s.defaultKeyID
 }
 
+
 // LoadKey loads a key with the given ID and password
 func (s *KeyStoreSigner) LoadKey(id string, password []byte) error {
-	_, err := s.keyStore.LoadKey(id, password)
+	_, err := s.keyStore.LoadKey(id, func() (*crypto.SecureBytes, error) {
+		return crypto.NewSecureBytes(password), nil
+	})
 	if err != nil {
 		return err
 	}
@@ -57,7 +60,9 @@ func (s *KeyStoreSigner) LoadKey(id string, password []byte) error {
 
 // GenerateKey generates a new key with the given ID and password
 func (s *KeyStoreSigner) GenerateKey(id string, password []byte) error {
-	_, err := s.keyStore.GenerateKey(id, password)
+	_, err := s.keyStore.GenerateKey(id, func() (*crypto.SecureBytes, error) {
+		return crypto.NewSecureBytes(password), nil
+	})
 	if err != nil {
 		return err
 	}

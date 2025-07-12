@@ -148,8 +148,12 @@ func TestKeyStore(t *testing.T) {
 	var key1ID = "test_key_1"
 	var password = []byte("test_password")
 
+	passwordProvider := func() (*SecureBytes, error) {
+		return NewSecureBytes(password), nil
+	}
+
 	t.Run("GenerateKey", func(t *testing.T) {
-		keyPair, err := ks.GenerateKey(key1ID, password)
+		keyPair, err := ks.GenerateKey(key1ID, passwordProvider)
 		if err != nil {
 			t.Fatalf("Failed to generate key: %v", err)
 		}
@@ -178,7 +182,7 @@ func TestKeyStore(t *testing.T) {
 		}
 
 		// Try to create a duplicate key
-		_, err = ks.GenerateKey(key1ID, password)
+		_, err = ks.GenerateKey(key1ID, passwordProvider)
 		if err != ErrKeyIDExists {
 			t.Errorf("Expected ErrKeyIDExists, got %v", err)
 		}
@@ -195,7 +199,7 @@ func TestKeyStore(t *testing.T) {
 		}
 
 		// Load the key
-		keyPair, err := ks.LoadKey(key1ID, password)
+		keyPair, err := ks.LoadKey(key1ID, passwordProvider)
 		if err != nil {
 			t.Fatalf("Failed to load key: %v", err)
 		}
@@ -217,7 +221,9 @@ func TestKeyStore(t *testing.T) {
 		// 3. The encryption/decryption could succeed by chance with an incorrect password
 
 		// Try to load non-existent key
-		_, err = ks.LoadKey("nonexistent", password)
+		_, err = ks.LoadKey("nonexistent", func() (*SecureBytes, error) {
+			return NewSecureBytes(password), nil
+		})
 		if err != ErrKeyIDNotFound {
 			t.Errorf("Expected ErrKeyIDNotFound, got %v", err)
 		}
@@ -227,7 +233,7 @@ func TestKeyStore(t *testing.T) {
 	t.Run("ListKeyIDs", func(t *testing.T) {
 		// Generate another key to test multiple keys
 		var key2ID = "test_key_2"
-		_, err := ks.GenerateKey(key2ID, password)
+		_, err := ks.GenerateKey(key2ID, passwordProvider)
 		if err != nil {
 			t.Fatalf("Failed to generate second key: %v", err)
 		}
@@ -299,7 +305,7 @@ func TestKeyStore(t *testing.T) {
 	// Test deleting key
 	t.Run("DeleteKey", func(t *testing.T) {
 		// First load the key to test it's unloaded when deleted
-		_, err := ks.LoadKey(key1ID, password)
+		_, err := ks.LoadKey(key1ID, passwordProvider)
 		if err != nil {
 			t.Fatalf("Failed to load key: %v", err)
 		}
@@ -363,7 +369,7 @@ func TestKeyStore(t *testing.T) {
 	// Test closing keystore
 	t.Run("Close", func(t *testing.T) {
 		// Load a key to test it's unloaded on close
-		_, err := ks.LoadKey("test_key_2", password) // The remaining key
+		_, err := ks.LoadKey("test_key_2", passwordProvider) // The remaining key
 		if err != nil {
 			t.Fatalf("Failed to load key: %v", err)
 		}

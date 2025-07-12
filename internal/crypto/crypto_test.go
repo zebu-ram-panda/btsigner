@@ -14,9 +14,12 @@ const (
 	testKeyPath  = "test_key.json"
 )
 
+
 func TestKeyGeneration(t *testing.T) {
 	// Generate a key
-	keyPair, err := GenerateKeyFile(testKeyPath, []byte(testPassword))
+	keyPair, err := GenerateKeyFile(testKeyPath, func() (*SecureBytes, error) {
+		return NewSecureBytes([]byte(testPassword)), nil
+	})
 	if err != nil {
 		t.Fatalf("Failed to generate key: %v", err)
 	}
@@ -57,14 +60,18 @@ func TestPublicKeyToSS58Error(t *testing.T) {
 
 func TestKeyLoadingAndSigning(t *testing.T) {
 	// Generate a key
-	originalKeyPair, err := GenerateKeyFile(testKeyPath, []byte(testPassword))
+	originalKeyPair, err := GenerateKeyFile(testKeyPath, func() (*SecureBytes, error) {
+		return NewSecureBytes([]byte(testPassword)), nil
+	})
 	if err != nil {
 		t.Fatalf("Failed to generate key: %v", err)
 	}
 	defer os.Remove(testKeyPath)
 
 	// Load the key
-	loadedKeyPair, err := LoadSr25519KeyPair(testKeyPath, []byte(testPassword))
+	loadedKeyPair, err := LoadSr25519KeyPair(testKeyPath, func() (*SecureBytes, error) {
+		return NewSecureBytes([]byte(testPassword)), nil
+	})
 	if err != nil {
 		t.Fatalf("Failed to load key: %v", err)
 	}
@@ -109,14 +116,18 @@ func TestKeyLoadingAndSigning(t *testing.T) {
 
 func TestInvalidPassword(t *testing.T) {
 	// Generate a key
-	_, err := GenerateKeyFile(testKeyPath, []byte(testPassword))
+	_, err := GenerateKeyFile(testKeyPath, func() (*SecureBytes, error) {
+		return NewSecureBytes([]byte(testPassword)), nil
+	})
 	if err != nil {
 		t.Fatalf("Failed to generate key: %v", err)
 	}
 	defer os.Remove(testKeyPath)
 
 	// Try to load with wrong password
-	_, err = LoadSr25519KeyPair(testKeyPath, []byte("wrong-password"))
+	_, err = LoadSr25519KeyPair(testKeyPath, func() (*SecureBytes, error) {
+		return NewSecureBytes([]byte("wrong-password")), nil
+	})
 	if err == nil {
 		t.Error("Expected error when loading with wrong password, got nil")
 	}
@@ -124,7 +135,9 @@ func TestInvalidPassword(t *testing.T) {
 
 func TestKeyZeroing(t *testing.T) {
 	// Generate a key
-	keyPair, err := GenerateKeyFile(testKeyPath, []byte(testPassword))
+	keyPair, err := GenerateKeyFile(testKeyPath, func() (*SecureBytes, error) {
+		return NewSecureBytes([]byte(testPassword)), nil
+	})
 	if err != nil {
 		t.Fatalf("Failed to generate key: %v", err)
 	}
@@ -154,7 +167,9 @@ func TestKeyZeroing(t *testing.T) {
 func TestLoadSr25519KeyPairErrorCases(t *testing.T) {
 	// Test loading a non-existent key file
 	t.Run("NonExistentFile", func(t *testing.T) {
-		_, err := LoadSr25519KeyPair("/nonexistent/path/key.json", []byte(testPassword))
+		_, err := LoadSr25519KeyPair("/nonexistent/path/key.json", func() (*SecureBytes, error) {
+			return NewSecureBytes([]byte(testPassword)), nil
+		})
 		if err == nil {
 			t.Error("Expected error for non-existent file, got nil")
 		}
@@ -172,7 +187,9 @@ func TestLoadSr25519KeyPairErrorCases(t *testing.T) {
 		}
 		defer os.Remove(invalidJsonPath)
 
-		_, err = LoadSr25519KeyPair(invalidJsonPath, []byte(testPassword))
+		_, err = LoadSr25519KeyPair(invalidJsonPath, func() (*SecureBytes, error) {
+			return NewSecureBytes([]byte(testPassword)), nil
+		})
 		if err == nil {
 			t.Error("Expected error for invalid JSON, got nil")
 		}
@@ -184,7 +201,9 @@ func TestLoadSr25519KeyPairErrorCases(t *testing.T) {
 	// Test loading a key file with corrupted ciphertext (simulating decryption failure)
 	t.Run("CorruptedCiphertext", func(t *testing.T) {
 		// Generate a valid key file first
-		_, err := GenerateKeyFile(testKeyPath, []byte(testPassword))
+		_, err := GenerateKeyFile(testKeyPath, func() (*SecureBytes, error) {
+			return NewSecureBytes([]byte(testPassword)), nil
+		})
 		if err != nil {
 			t.Fatalf("Failed to generate key: %v", err)
 		}
@@ -201,7 +220,9 @@ func TestLoadSr25519KeyPairErrorCases(t *testing.T) {
 		corruptedData, _ := json.Marshal(keyFile)
 		os.WriteFile(testKeyPath, corruptedData, 0600)
 
-		_, err = LoadSr25519KeyPair(testKeyPath, []byte(testPassword))
+		_, err = LoadSr25519KeyPair(testKeyPath, func() (*SecureBytes, error) {
+			return NewSecureBytes([]byte(testPassword)), nil
+		})
 		if err == nil {
 			t.Error("Expected error for corrupted ciphertext, got nil")
 		}
@@ -234,33 +255,37 @@ func TestGenerateKeyFileErrorCases(t *testing.T) {
 	t.Run("InvalidPath", func(t *testing.T) {
 		// Attempt to write to a directory that likely doesn't exist or is read-only
 		invalidPath := "/nonexistent_dir/test_key.json"
-		_, err := GenerateKeyFile(invalidPath, []byte(testPassword))
+		_, err := GenerateKeyFile(invalidPath, func() (*SecureBytes, error) {
+			return NewSecureBytes([]byte(testPassword)), nil
+		})
 		if err == nil {
 			t.Error("Expected error for invalid path, got nil")
 		}
 		if err != nil && !strings.Contains(err.Error(), "no such file or directory") && !strings.Contains(err.Error(), "permission denied") {
 			t.Errorf("Expected 'no such file or directory' or 'permission denied' error, got: %v", err)
-			}
-		})
-		// Test GenerateKeyFile with a path that causes os.WriteFile to fail (e.g., directory not writable)
-		t.Run("WriteFileFailure", func(t *testing.T) {
-			// Create a read-only directory
-			readOnlyDir := t.TempDir()
-			err := os.Chmod(readOnlyDir, 0400) // Make it read-only
-			if err != nil {
-				t.Fatalf("Failed to chmod directory: %v", err)
-			}
-			defer os.Chmod(readOnlyDir, 0700) // Change back to writable for cleanup
+		}
+	})
+	// Test GenerateKeyFile with a path that causes os.WriteFile to fail (e.g., directory not writable)
+	t.Run("WriteFileFailure", func(t *testing.T) {
+		// Create a read-only directory
+		readOnlyDir := t.TempDir()
+		err := os.Chmod(readOnlyDir, 0400) // Make it read-only
+		if err != nil {
+			t.Fatalf("Failed to chmod directory: %v", err)
+		}
+		defer os.Chmod(readOnlyDir, 0700) // Change back to writable for cleanup
 
-			filePath := filepath.Join(readOnlyDir, "test_key.json")
-			_, err = GenerateKeyFile(filePath, []byte(testPassword))
-			if err == nil {
-				t.Error("Expected error for write file failure, got nil")
-			}
-			if err != nil && !strings.Contains(err.Error(), "permission denied") {
-				t.Errorf("Expected 'permission denied' error, got: %v", err)
-			}
+		filePath := filepath.Join(readOnlyDir, "test_key.json")
+		_, err = GenerateKeyFile(filePath, func() (*SecureBytes, error) {
+			return NewSecureBytes([]byte(testPassword)), nil
 		})
+		if err == nil {
+			t.Error("Expected error for write file failure, got nil")
+		}
+		if err != nil && !strings.Contains(err.Error(), "permission denied") {
+			t.Errorf("Expected 'permission denied' error, got: %v", err)
+		}
+	})
 }
 
 

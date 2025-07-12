@@ -23,6 +23,8 @@ type ClientOptions struct {
 	CertPath           string
 	KeyPath            string
 	ServerNameOverride string
+	MinVersion         string
+	CipherSuites       []string
 	Timeout            time.Duration
 }
 

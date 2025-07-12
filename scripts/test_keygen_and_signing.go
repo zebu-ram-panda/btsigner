@@ -126,7 +126,9 @@ func (ts *TestSuite) testSingleKeyGeneration() {
 	fmt.Println(strings.Repeat("-", 30))
 	
 	// Generate a single key
-	keyPair, err := crypto.GenerateKeyFile(singleKeyPath, []byte(testPassword))
+	keyPair, err := crypto.GenerateKeyFile(singleKeyPath, func() (*crypto.SecureBytes, error) {
+		return crypto.NewSecureBytes([]byte(testPassword)), nil
+	})
 	if err != nil {
 		result.Error = fmt.Errorf("failed to generate key: %w", err)
 		result.Duration = time.Since(start)

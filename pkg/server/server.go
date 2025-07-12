@@ -16,6 +16,7 @@ import (
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"crypto/tls"
 )
 
 // KeyStoreSigner defines the interface for keystore-specific functionality
@@ -62,13 +63,16 @@ func (s *Server) Run() error {
 
 	// Configure TLS if enabled
 	if s.config.TLS.Enabled {
-		creds, err := credentials.NewServerTLSFromFile(
-			s.config.TLS.CertPath,
-			s.config.TLS.KeyPath,
-		)
+		tlsConfig, err := s.config.LoadTLSConfig()
 		if err != nil {
-			return fmt.Errorf("failed to load TLS credentials: %w", err)
+			return fmt.Errorf("failed to load TLS config: %w", err)
 		}
+
+		creds := credentials.NewTLS(&tls.Config{
+			Certificates: []tls.Certificate{tlsConfig.Cert},
+			ClientCAs:    tlsConfig.CACertPool,
+			MinVersion:   tlsConfig.MinVersion,
+		})
 		opts = append(opts, grpc.Creds(creds))
 	}
 

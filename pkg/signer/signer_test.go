@@ -13,9 +13,12 @@ const (
 	testKeyPath  = "test_key.json"
 )
 
+
 func TestSr25519Signer(t *testing.T) {
 	// Setup: create a test key
-	_, err := crypto.GenerateKeyFile(testKeyPath, []byte(testPassword))
+	_, err := crypto.GenerateKeyFile(testKeyPath, func() (*crypto.SecureBytes, error) {
+		return crypto.NewSecureBytes([]byte(testPassword)), nil
+	})
 	if err != nil {
 		t.Fatalf("Failed to generate key: %v", err)
 	}
