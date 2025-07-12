@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.6
 // 	protoc        v5.29.3
-// source: signer.proto
+// source: proto/signer.proto
 
 package v1
 
@@ -37,7 +37,7 @@ type GetPublicKeyResponse struct {
 
 func (x *GetPublicKeyResponse) Reset() {
 	*x = GetPublicKeyResponse{}
-	mi := &file_signer_proto_msgTypes[0]
+	mi := &file_proto_signer_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -49,7 +49,7 @@ func (x *GetPublicKeyResponse) String() string {
 func (*GetPublicKeyResponse) ProtoMessage() {}
 
 func (x *GetPublicKeyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_signer_proto_msgTypes[0]
+	mi := &file_proto_signer_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -62,7 +62,7 @@ func (x *GetPublicKeyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPublicKeyResponse.ProtoReflect.Descriptor instead.
 func (*GetPublicKeyResponse) Descriptor() ([]byte, []int) {
-	return file_signer_proto_rawDescGZIP(), []int{0}
+	return file_proto_signer_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *GetPublicKeyResponse) GetPublicKey() []byte {
@@ -97,7 +97,7 @@ type GetPublicKeyByIDRequest struct {
 
 func (x *GetPublicKeyByIDRequest) Reset() {
 	*x = GetPublicKeyByIDRequest{}
-	mi := &file_signer_proto_msgTypes[1]
+	mi := &file_proto_signer_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -109,7 +109,7 @@ func (x *GetPublicKeyByIDRequest) String() string {
 func (*GetPublicKeyByIDRequest) ProtoMessage() {}
 
 func (x *GetPublicKeyByIDRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_signer_proto_msgTypes[1]
+	mi := &file_proto_signer_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -122,7 +122,7 @@ func (x *GetPublicKeyByIDRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPublicKeyByIDRequest.ProtoReflect.Descriptor instead.
 func (*GetPublicKeyByIDRequest) Descriptor() ([]byte, []int) {
-	return file_signer_proto_rawDescGZIP(), []int{1}
+	return file_proto_signer_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *GetPublicKeyByIDRequest) GetKeyId() string {
@@ -145,7 +145,7 @@ type SignExtrinsicRequest struct {
 
 func (x *SignExtrinsicRequest) Reset() {
 	*x = SignExtrinsicRequest{}
-	mi := &file_signer_proto_msgTypes[2]
+	mi := &file_proto_signer_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -157,7 +157,7 @@ func (x *SignExtrinsicRequest) String() string {
 func (*SignExtrinsicRequest) ProtoMessage() {}
 
 func (x *SignExtrinsicRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_signer_proto_msgTypes[2]
+	mi := &file_proto_signer_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -170,7 +170,7 @@ func (x *SignExtrinsicRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SignExtrinsicRequest.ProtoReflect.Descriptor instead.
 func (*SignExtrinsicRequest) Descriptor() ([]byte, []int) {
-	return file_signer_proto_rawDescGZIP(), []int{2}
+	return file_proto_signer_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *SignExtrinsicRequest) GetPayload() []byte {
@@ -202,7 +202,7 @@ type SignExtrinsicWithKeyRequest struct {
 
 func (x *SignExtrinsicWithKeyRequest) Reset() {
 	*x = SignExtrinsicWithKeyRequest{}
-	mi := &file_signer_proto_msgTypes[3]
+	mi := &file_proto_signer_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -214,7 +214,7 @@ func (x *SignExtrinsicWithKeyRequest) String() string {
 func (*SignExtrinsicWithKeyRequest) ProtoMessage() {}
 
 func (x *SignExtrinsicWithKeyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_signer_proto_msgTypes[3]
+	mi := &file_proto_signer_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -227,7 +227,7 @@ func (x *SignExtrinsicWithKeyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SignExtrinsicWithKeyRequest.ProtoReflect.Descriptor instead.
 func (*SignExtrinsicWithKeyRequest) Descriptor() ([]byte, []int) {
-	return file_signer_proto_rawDescGZIP(), []int{3}
+	return file_proto_signer_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *SignExtrinsicWithKeyRequest) GetKeyId() string {
@@ -264,7 +264,7 @@ type SignExtrinsicResponse struct {
 
 func (x *SignExtrinsicResponse) Reset() {
 	*x = SignExtrinsicResponse{}
-	mi := &file_signer_proto_msgTypes[4]
+	mi := &file_proto_signer_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -276,7 +276,7 @@ func (x *SignExtrinsicResponse) String() string {
 func (*SignExtrinsicResponse) ProtoMessage() {}
 
 func (x *SignExtrinsicResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_signer_proto_msgTypes[4]
+	mi := &file_proto_signer_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -289,7 +289,7 @@ func (x *SignExtrinsicResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SignExtrinsicResponse.ProtoReflect.Descriptor instead.
 func (*SignExtrinsicResponse) Descriptor() ([]byte, []int) {
-	return file_signer_proto_rawDescGZIP(), []int{4}
+	return file_proto_signer_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *SignExtrinsicResponse) GetSignature() []byte {
@@ -319,7 +319,7 @@ type ListKeysResponse struct {
 
 func (x *ListKeysResponse) Reset() {
 	*x = ListKeysResponse{}
-	mi := &file_signer_proto_msgTypes[5]
+	mi := &file_proto_signer_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -331,7 +331,7 @@ func (x *ListKeysResponse) String() string {
 func (*ListKeysResponse) ProtoMessage() {}
 
 func (x *ListKeysResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_signer_proto_msgTypes[5]
+	mi := &file_proto_signer_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -344,7 +344,7 @@ func (x *ListKeysResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListKeysResponse.ProtoReflect.Descriptor instead.
 func (*ListKeysResponse) Descriptor() ([]byte, []int) {
-	return file_signer_proto_rawDescGZIP(), []int{5}
+	return file_proto_signer_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ListKeysResponse) GetKeyIds() []string {
@@ -361,11 +361,11 @@ func (x *ListKeysResponse) GetDefaultKeyId() string {
 	return ""
 }
 
-var File_signer_proto protoreflect.FileDescriptor
+var File_proto_signer_proto protoreflect.FileDescriptor
 
-const file_signer_proto_rawDesc = "" +
+const file_proto_signer_proto_rawDesc = "" +
 	"\n" +
-	"\fsigner.proto\x12\vbtsigner.v1\x1a\x1bgoogle/protobuf/empty.proto\"o\n" +
+	"\x12proto/signer.proto\x12\vbtsigner.v1\x1a\x1bgoogle/protobuf/empty.proto\"o\n" +
 	"\x14GetPublicKeyResponse\x12\x1d\n" +
 	"\n" +
 	"public_key\x18\x01 \x01(\fR\tpublicKey\x12!\n" +
@@ -395,19 +395,19 @@ const file_signer_proto_rawDesc = "" +
 	"\x06Health\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.EmptyB3Z1github.com/bittensor-lab/btsigner/proto/signer/v1b\x06proto3"
 
 var (
-	file_signer_proto_rawDescOnce sync.Once
-	file_signer_proto_rawDescData []byte
+	file_proto_signer_proto_rawDescOnce sync.Once
+	file_proto_signer_proto_rawDescData []byte
 )
 
-func file_signer_proto_rawDescGZIP() []byte {
-	file_signer_proto_rawDescOnce.Do(func() {
-		file_signer_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_signer_proto_rawDesc), len(file_signer_proto_rawDesc)))
+func file_proto_signer_proto_rawDescGZIP() []byte {
+	file_proto_signer_proto_rawDescOnce.Do(func() {
+		file_proto_signer_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto_signer_proto_rawDesc), len(file_proto_signer_proto_rawDesc)))
 	})
-	return file_signer_proto_rawDescData
+	return file_proto_signer_proto_rawDescData
 }
 
-var file_signer_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
-var file_signer_proto_goTypes = []any{
+var file_proto_signer_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_proto_signer_proto_goTypes = []any{
 	(*GetPublicKeyResponse)(nil),        // 0: btsigner.v1.GetPublicKeyResponse
 	(*GetPublicKeyByIDRequest)(nil),     // 1: btsigner.v1.GetPublicKeyByIDRequest
 	(*SignExtrinsicRequest)(nil),        // 2: btsigner.v1.SignExtrinsicRequest
@@ -416,7 +416,7 @@ var file_signer_proto_goTypes = []any{
 	(*ListKeysResponse)(nil),            // 5: btsigner.v1.ListKeysResponse
 	(*emptypb.Empty)(nil),               // 6: google.protobuf.Empty
 }
-var file_signer_proto_depIdxs = []int32{
+var file_proto_signer_proto_depIdxs = []int32{
 	6, // 0: btsigner.v1.RemoteSigner.GetPublicKey:input_type -> google.protobuf.Empty
 	1, // 1: btsigner.v1.RemoteSigner.GetPublicKeyByID:input_type -> btsigner.v1.GetPublicKeyByIDRequest
 	2, // 2: btsigner.v1.RemoteSigner.SignExtrinsic:input_type -> btsigner.v1.SignExtrinsicRequest
@@ -436,26 +436,26 @@ var file_signer_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for field type_name
 }
 
-func init() { file_signer_proto_init() }
-func file_signer_proto_init() {
-	if File_signer_proto != nil {
+func init() { file_proto_signer_proto_init() }
+func file_proto_signer_proto_init() {
+	if File_proto_signer_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_signer_proto_rawDesc), len(file_signer_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_signer_proto_rawDesc), len(file_proto_signer_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_signer_proto_goTypes,
-		DependencyIndexes: file_signer_proto_depIdxs,
-		MessageInfos:      file_signer_proto_msgTypes,
+		GoTypes:           file_proto_signer_proto_goTypes,
+		DependencyIndexes: file_proto_signer_proto_depIdxs,
+		MessageInfos:      file_proto_signer_proto_msgTypes,
 	}.Build()
-	File_signer_proto = out.File
-	file_signer_proto_goTypes = nil
-	file_signer_proto_depIdxs = nil
+	File_proto_signer_proto = out.File
+	file_proto_signer_proto_goTypes = nil
+	file_proto_signer_proto_depIdxs = nil
 }

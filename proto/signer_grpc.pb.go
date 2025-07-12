@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v5.29.3
-// source: signer.proto
+// source: proto/signer.proto
 
 package v1
 
@@ -324,5 +324,5 @@ var RemoteSigner_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "signer.proto",
+	Metadata: "proto/signer.proto",
 }

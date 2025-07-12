@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/ChainSafe/go-schnorrkel"
 	"github.com/gtank/merlin"

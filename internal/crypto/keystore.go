@@ -47,6 +47,7 @@ func NewKeyStore(basePath string) (*KeyStore, error) {
 
 	// Try to load existing metadata
 	if _, err := os.Stat(metadataPath); err == nil {
+		metadataPath = filepath.Clean(metadataPath)
 		data, err := os.ReadFile(metadataPath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read metadata: %w", err)
