@@ -85,16 +85,50 @@ func (s *Server) GetPublicKey(ctx context.Context, _ *emptypb.Empty) (*pb.GetPub
 		return nil, err
 	}
 
-	// Log key info
+	// Get key ID if available
+	keyID := ""
 	if ksSigner, ok := s.signer.(*signer.KeyStoreSigner); ok {
+		keyID = ksSigner.DefaultKeyID()
 		s.logger.Info("Using key",
-			zap.String("key_id", ksSigner.DefaultKeyID()),
+			zap.String("key_id", keyID),
 			zap.String("ss58_address", ss58Addr))
 	}
 
 	return &pb.GetPublicKeyResponse{
 		PublicKey:   pubKey,
 		Ss58Address: ss58Addr,
+		KeyId:       keyID,
+	}, nil
+}
+
+// GetPublicKeyByID returns the public key of a specific signer by ID
+func (s *Server) GetPublicKeyByID(ctx context.Context, req *pb.GetPublicKeyByIDRequest) (*pb.GetPublicKeyResponse, error) {
+	if req.KeyId == "" {
+		return nil, fmt.Errorf("key_id cannot be empty")
+	}
+
+	// Check if we have a KeyStoreSigner
+	ksSigner, ok := s.signer.(*signer.KeyStoreSigner)
+	if !ok {
+		return nil, fmt.Errorf("keystore signer not available")
+	}
+
+	pubKey, ss58Addr, err := ksSigner.GetPublicKeyByID(req.KeyId)
+	if err != nil {
+		s.logger.Error("Failed to get public key by ID",
+			zap.String("key_id", req.KeyId),
+			zap.Error(err))
+		return nil, err
+	}
+
+	s.logger.Info("Retrieved public key",
+		zap.String("key_id", req.KeyId),
+		zap.String("ss58_address", ss58Addr))
+
+	return &pb.GetPublicKeyResponse{
+		PublicKey:   pubKey,
+		Ss58Address: ss58Addr,
+		KeyId:       req.KeyId,
 	}, nil
 }
 
@@ -106,28 +140,10 @@ func (s *Server) SignExtrinsic(ctx context.Context, req *pb.SignExtrinsicRequest
 	}
 
 	// Check if we have a KeyStoreSigner
+	keyID := ""
 	if ksSigner, ok := s.signer.(*signer.KeyStoreSigner); ok {
-		// Extract key ID from context if provided
-		keyID := ""
-		if len(req.Context) > 0 {
-			// Try to parse context as key ID
-			keyID = string(req.Context)
-		}
-
-		// If key ID is provided, use it
-		if keyID != "" {
-			s.logger.Info("Signing with specific key", zap.String("key_id", keyID))
-			signature, err := ksSigner.SignWithKey(ctx, keyID, req.Payload)
-			if err != nil {
-				s.logger.Error("Failed to sign with key",
-					zap.String("key_id", keyID),
-					zap.Error(err))
-				return nil, err
-			}
-			return &pb.SignExtrinsicResponse{
-				Signature: signature,
-			}, nil
-		}
+		keyID = ksSigner.DefaultKeyID()
+		s.logger.Info("Signing with default key", zap.String("key_id", keyID))
 	}
 
 	// Default signing with default key
@@ -139,6 +155,65 @@ func (s *Server) SignExtrinsic(ctx context.Context, req *pb.SignExtrinsicRequest
 
 	return &pb.SignExtrinsicResponse{
 		Signature: signature,
+		KeyId:     keyID,
+	}, nil
+}
+
+// SignExtrinsicWithKey signs a payload with a specific signer's private key
+func (s *Server) SignExtrinsicWithKey(ctx context.Context, req *pb.SignExtrinsicWithKeyRequest) (*pb.SignExtrinsicResponse, error) {
+	if len(req.Payload) == 0 {
+		s.logger.Error("Empty payload received")
+		return nil, fmt.Errorf("payload cannot be empty")
+	}
+
+	if req.KeyId == "" {
+		s.logger.Error("Empty key ID received")
+		return nil, fmt.Errorf("key_id cannot be empty")
+	}
+
+	// Check if we have a KeyStoreSigner
+	ksSigner, ok := s.signer.(*signer.KeyStoreSigner)
+	if !ok {
+		return nil, fmt.Errorf("keystore signer not available")
+	}
+
+	s.logger.Info("Signing with specific key", zap.String("key_id", req.KeyId))
+	signature, err := ksSigner.SignWithKey(ctx, req.KeyId, req.Payload)
+	if err != nil {
+		s.logger.Error("Failed to sign with key",
+			zap.String("key_id", req.KeyId),
+			zap.Error(err))
+		return nil, err
+	}
+
+	return &pb.SignExtrinsicResponse{
+		Signature: signature,
+		KeyId:     req.KeyId,
+	}, nil
+}
+
+// ListKeys returns a list of all available key IDs
+func (s *Server) ListKeys(ctx context.Context, _ *emptypb.Empty) (*pb.ListKeysResponse, error) {
+	// Check if we have a KeyStoreSigner
+	ksSigner, ok := s.signer.(*signer.KeyStoreSigner)
+	if !ok {
+		// For single key signers, return empty list
+		return &pb.ListKeysResponse{
+			KeyIds:       []string{},
+			DefaultKeyId: "",
+		}, nil
+	}
+
+	keyIDs := ksSigner.ListKeyIDs()
+	defaultKeyID := ksSigner.DefaultKeyID()
+
+	s.logger.Info("Listed keys",
+		zap.Strings("key_ids", keyIDs),
+		zap.String("default_key_id", defaultKeyID))
+
+	return &pb.ListKeysResponse{
+		KeyIds:       keyIDs,
+		DefaultKeyId: defaultKeyID,
 	}, nil
 }
 
