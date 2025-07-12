@@ -23,11 +23,13 @@ type Config struct {
 	} `yaml:"key" json:"key"`
 
 	TLS struct {
-		Enabled    bool   `yaml:"enabled" json:"enabled"`
-		CertPath   string `yaml:"cert_path" json:"cert_path"`
-		KeyPath    string `yaml:"key_path" json:"key_path"`
-		ClientAuth bool   `yaml:"client_auth" json:"client_auth"`
-		CAPath     string `yaml:"ca_path" json:"ca_path"`
+		Enabled      bool     `yaml:"enabled" json:"enabled"`
+		CertPath     string   `yaml:"cert_path" json:"cert_path"`
+		KeyPath      string   `yaml:"key_path" json:"key_path"`
+		ClientAuth   bool     `yaml:"client_auth" json:"client_auth"`
+		CAPath       string   `yaml:"ca_path" json:"ca_path"`
+		MinVersion   string   `yaml:"min_version" json:"min_version"`
+		CipherSuites []string `yaml:"cipher_suites" json:"cipher_suites"`
 	} `yaml:"tls" json:"tls"`
 
 	Metrics struct {
@@ -43,6 +45,7 @@ type Config struct {
 
 // LoadConfig loads configuration from a file
 func LoadConfig(path string) (*Config, error) {
+	path = filepath.Clean(path)
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %w", err)

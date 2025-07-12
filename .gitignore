@@ -11,3 +11,10 @@ bin/
 .env.production.local
 config.yaml
 reports/
+
+demo-key.json
+demo-keystore/
+certs/
+gosec-results.json
+server.log
+server.pid

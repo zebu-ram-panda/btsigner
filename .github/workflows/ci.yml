@@ -66,4 +66,4 @@ jobs:
         run: go build -v ./cmd/btsigner
 
       - name: Build btclient
-        run: go build -v ./cmd/btclient 
+        run: go build -v ./cmd/btclient

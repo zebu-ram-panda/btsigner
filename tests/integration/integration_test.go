@@ -22,7 +22,9 @@ func TestSr25519SignerIntegration(t *testing.T) {
 	}
 
 	// Generate a key
-	keyPair, err := crypto.GenerateKeyFile(testKeyPath, []byte(testPassword))
+	keyPair, err := crypto.GenerateKeyFile(testKeyPath, func() (*crypto.SecureBytes, error) {
+		return crypto.NewSecureBytes([]byte(testPassword)), nil
+	})
 	if err != nil {
 		t.Fatalf("Failed to generate key: %v", err)
 	}

@@ -1,6 +1,6 @@
 # Makefile
 
-.PHONY: all build test clean proto docker test-all test-unit test-deadcode test-static test-security test-integration test-ci
+.PHONY: all build test clean proto docker test-all test-unit test-deadcode test-static test-security test-integration test-ci test-keygen demo demo-full
 
 # Variables
 BINARY_NAME=btsigner
@@ -109,3 +109,15 @@ run:
 
 genkey:
 	./bin/${BINARY_NAME} --genkey --key ./key.json
+
+test-keygen:
+	go run scripts/test_keygen_and_signing.go
+
+test-server:
+	./scripts/test_grpc_server.sh
+
+demo:
+	./scripts/demo_simple.sh
+
+demo-full:
+	./scripts/demo_full_scenario.sh

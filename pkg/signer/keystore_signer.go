@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/bittensor-lab/btsigner/internal/crypto"
 )
@@ -16,6 +17,7 @@ var (
 type KeyStoreSigner struct {
 	keyStore     *crypto.KeyStore
 	defaultKeyID string
+	mu           sync.RWMutex
 }
 
 // NewKeyStoreSigner creates a new signer that uses a KeyStore
@@ -32,40 +34,75 @@ func NewKeyStoreSigner(keyStorePath string) (*KeyStoreSigner, error) {
 
 // SetDefaultKeyID sets the default key ID to use for signing
 func (s *KeyStoreSigner) SetDefaultKeyID(id string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.defaultKeyID = id
 }
 
 // DefaultKeyID returns the current default key ID
 func (s *KeyStoreSigner) DefaultKeyID() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.defaultKeyID
 }
 
 // LoadKey loads a key with the given ID and password
 func (s *KeyStoreSigner) LoadKey(id string, password []byte) error {
-	_, err := s.keyStore.LoadKey(id, password)
+	_, err := s.keyStore.LoadKey(id, func() (*crypto.SecureBytes, error) {
+		return crypto.NewSecureBytes(password), nil
+	})
 	if err != nil {
 		return err
 	}
 
 	// If this is the first key loaded, set it as default
+	s.mu.Lock()
 	if s.defaultKeyID == "" {
 		s.defaultKeyID = id
 	}
+	s.mu.Unlock()
 
 	return nil
 }
 
 // GenerateKey generates a new key with the given ID and password
 func (s *KeyStoreSigner) GenerateKey(id string, password []byte) error {
-	_, err := s.keyStore.GenerateKey(id, password)
+	_, err := s.keyStore.GenerateKey(id, func() (*crypto.SecureBytes, error) {
+		return crypto.NewSecureBytes(password), nil
+	})
 	if err != nil {
 		return err
 	}
 
 	// If this is the first key generated, set it as default
+	s.mu.Lock()
 	if s.defaultKeyID == "" {
 		s.defaultKeyID = id
 	}
+	s.mu.Unlock()
+
+	return nil
+}
+
+// ImportKey imports a key from bittensor wallet files
+func (s *KeyStoreSigner) ImportKey(id string, coldkeyPath string, coldkeyPubPath string, coldkeyPassword []byte, keystorePassword []byte) error {
+	_, err := s.keyStore.ImportKey(id, coldkeyPath, coldkeyPubPath,
+		func() (*crypto.SecureBytes, error) {
+			return crypto.NewSecureBytes(coldkeyPassword), nil
+		},
+		func() (*crypto.SecureBytes, error) {
+			return crypto.NewSecureBytes(keystorePassword), nil
+		})
+	if err != nil {
+		return err
+	}
+
+	// If this is the first key imported, set it as default
+	s.mu.Lock()
+	if s.defaultKeyID == "" {
+		s.defaultKeyID = id
+	}
+	s.mu.Unlock()
 
 	return nil
 }
@@ -87,11 +124,15 @@ func (s *KeyStoreSigner) ListKeyIDs() []string {
 
 // GetPublicKey implements Signer.GetPublicKey using the default key
 func (s *KeyStoreSigner) GetPublicKey() ([]byte, string, error) {
-	if s.defaultKeyID == "" {
+	s.mu.RLock()
+	defaultKeyID := s.defaultKeyID
+	s.mu.RUnlock()
+
+	if defaultKeyID == "" {
 		return nil, "", ErrNoDefaultKeyID
 	}
 
-	return s.GetPublicKeyByID(s.defaultKeyID)
+	return s.GetPublicKeyByID(defaultKeyID)
 }
 
 // GetPublicKeyByID returns the public key for a specific key ID
@@ -101,11 +142,15 @@ func (s *KeyStoreSigner) GetPublicKeyByID(id string) ([]byte, string, error) {
 
 // Sign implements Signer.Sign using the default key
 func (s *KeyStoreSigner) Sign(ctx context.Context, payload []byte) ([]byte, error) {
-	if s.defaultKeyID == "" {
+	s.mu.RLock()
+	defaultKeyID := s.defaultKeyID
+	s.mu.RUnlock()
+
+	if defaultKeyID == "" {
 		return nil, ErrNoDefaultKeyID
 	}
 
-	return s.SignWithKey(ctx, s.defaultKeyID, payload)
+	return s.SignWithKey(ctx, defaultKeyID, payload)
 }
 
 // SignWithKey signs a payload with a specific key

@@ -21,7 +21,10 @@ type ClientOptions struct {
 	TLSEnabled         bool
 	CAPath             string
 	CertPath           string
+	KeyPath            string
 	ServerNameOverride string
+	MinVersion         string
+	CipherSuites       []string
 	Timeout            time.Duration
 }
 
@@ -63,7 +66,7 @@ func NewSignerClient(opts *ClientOptions) (*SignerClient, error) {
 		}
 
 		if opts.CertPath != "" {
-			cert, err := tls.LoadX509KeyPair(opts.CertPath, opts.CertPath)
+			cert, err := tls.LoadX509KeyPair(opts.CertPath, opts.KeyPath)
 			if err != nil {
 				return nil, fmt.Errorf("failed to load client cert: %w", err)
 			}
@@ -80,7 +83,7 @@ func NewSignerClient(opts *ClientOptions) (*SignerClient, error) {
 		dialOpts = append(dialOpts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}
 
-	conn, err := grpc.Dial(opts.Address, dialOpts...)
+	conn, err := grpc.NewClient(opts.Address, dialOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial server: %w", err)
 	}

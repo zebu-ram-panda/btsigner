@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/ChainSafe/go-schnorrkel"
 	"github.com/gtank/merlin"
@@ -31,12 +32,14 @@ type KeyFile struct {
 
 // Sr25519KeyPair holds the keypair for sr25519 operations
 type Sr25519KeyPair struct {
-	secretKey *schnorrkel.MiniSecretKey
-	publicKey []byte
+	secretKey       *schnorrkel.MiniSecretKey
+	publicKey       []byte
+	privateKeyBytes []byte // Temporary storage for imported private key bytes
 }
 
 // LoadSr25519KeyPair loads an sr25519 keypair from an encrypted file
-func LoadSr25519KeyPair(path string, password []byte) (*Sr25519KeyPair, error) {
+func LoadSr25519KeyPair(path string, passwordProvider func() (*SecureBytes, error)) (*Sr25519KeyPair, error) {
+	path = filepath.Clean(path)
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read key file: %w", err)
@@ -47,13 +50,24 @@ func LoadSr25519KeyPair(path string, password []byte) (*Sr25519KeyPair, error) {
 		return nil, ErrInvalidKeyFile
 	}
 
+	password, err := passwordProvider()
+	if err != nil {
+		return nil, err
+	}
+	defer password.Zero()
+
 	// Derive key from password using Argon2id
-	key := argon2.IDKey(password, keyFile.Salt, 1, 64*1024, 4, 32)
+	key := argon2.IDKey(password.Bytes(), keyFile.Salt, 1, 64*1024, 4, 32)
+	defer func() {
+		for i := range key {
+			key[i] = 0
+		}
+	}()
 
 	// Decrypt the private key
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return nil, ErrDecryptFailed
+		return nil, fmt.Errorf("failed to create cipher: %w", err)
 	}
 
 	aesgcm, err := cipher.NewGCM(block)
@@ -65,6 +79,11 @@ func LoadSr25519KeyPair(path string, password []byte) (*Sr25519KeyPair, error) {
 	if err != nil {
 		return nil, ErrDecryptFailed
 	}
+	defer func() {
+		for i := range privateKeyBytes {
+			privateKeyBytes[i] = 0
+		}
+	}()
 
 	// Create schnorrkel secret key
 	var miniSecretKey [32]byte
@@ -87,6 +106,9 @@ func (kp *Sr25519KeyPair) PublicKey() []byte {
 
 // Sign signs a message using sr25519
 func (kp *Sr25519KeyPair) Sign(message []byte) ([]byte, error) {
+	if kp.secretKey == nil {
+		return nil, errors.New("nil secret key")
+	}
 	t := merlin.NewTranscript("substrate")
 	t.AppendMessage([]byte("sign-message"), message)
 
@@ -102,18 +124,25 @@ func (kp *Sr25519KeyPair) Sign(message []byte) ([]byte, error) {
 
 // Zero wipes the secret key material from memory
 func (kp *Sr25519KeyPair) Zero() error {
-	// This is a best-effort attempt to clear the memory
-	// In Go, this isn't guaranteed due to GC and memory management
 	if kp.secretKey != nil {
-		// The schnorrkel library should provide a method to zero the key
-		// For now, we'll rely on GC
+		privateKeyBytes := kp.secretKey.Encode()
+		for i := range privateKeyBytes {
+			privateKeyBytes[i] = 0
+		}
 		kp.secretKey = nil
+	}
+	// Clear private key bytes if present
+	if kp.privateKeyBytes != nil {
+		for i := range kp.privateKeyBytes {
+			kp.privateKeyBytes[i] = 0
+		}
+		kp.privateKeyBytes = nil
 	}
 	return nil
 }
 
 // GenerateKeyFile creates a new encrypted key file
-func GenerateKeyFile(path string, password []byte) (*Sr25519KeyPair, error) {
+func GenerateKeyFile(path string, passwordProvider func() (*SecureBytes, error)) (*Sr25519KeyPair, error) {
 	// Generate a new keypair
 	miniSecretKey, err := schnorrkel.GenerateMiniSecretKey()
 	if err != nil {
@@ -132,8 +161,19 @@ func GenerateKeyFile(path string, password []byte) (*Sr25519KeyPair, error) {
 		return nil, err
 	}
 
+	password, err := passwordProvider()
+	if err != nil {
+		return nil, err
+	}
+	defer password.Zero()
+
 	// Derive encryption key from password
-	key := argon2.IDKey(password, salt, 1, 64*1024, 4, 32)
+	key := argon2.IDKey(password.Bytes(), salt, 1, 64*1024, 4, 32)
+	defer func() {
+		for i := range key {
+			key[i] = 0
+		}
+	}()
 
 	// Encrypt the private key
 	block, err := aes.NewCipher(key)

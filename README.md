@@ -98,6 +98,7 @@ btsigner includes a comprehensive testing suite to verify code quality, identify
 ### Basic Test Commands
 
 - `make test` - Run all unit tests
+- `make test-keygen` - Run key generation and signing test script
 - `make test-all` - Run all tests including unit, integration, dead code analysis, static analysis, and security checks
 
 ### Specific Test Commands

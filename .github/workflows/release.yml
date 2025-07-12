@@ -58,4 +58,4 @@ jobs:
             git add CHANGELOG.md
             git commit -m "docs: update CHANGELOG.md for ${{ github.ref_name }} [skip ci]"
             git push
-          fi 
+          fi
