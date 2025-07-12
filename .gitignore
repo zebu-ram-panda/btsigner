@@ -11,3 +11,4 @@ bin/
 .env.production.local
 config.yaml
 reports/
+gosec-results.json
