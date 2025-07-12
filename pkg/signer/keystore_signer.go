@@ -84,6 +84,29 @@ func (s *KeyStoreSigner) GenerateKey(id string, password []byte) error {
 	return nil
 }
 
+// ImportKey imports a key from bittensor wallet files
+func (s *KeyStoreSigner) ImportKey(id string, coldkeyPath string, coldkeyPubPath string, coldkeyPassword []byte, keystorePassword []byte) error {
+	_, err := s.keyStore.ImportKey(id, coldkeyPath, coldkeyPubPath,
+		func() (*crypto.SecureBytes, error) {
+			return crypto.NewSecureBytes(coldkeyPassword), nil
+		},
+		func() (*crypto.SecureBytes, error) {
+			return crypto.NewSecureBytes(keystorePassword), nil
+		})
+	if err != nil {
+		return err
+	}
+
+	// If this is the first key imported, set it as default
+	s.mu.Lock()
+	if s.defaultKeyID == "" {
+		s.defaultKeyID = id
+	}
+	s.mu.Unlock()
+
+	return nil
+}
+
 // UnloadKey unloads a key from memory
 func (s *KeyStoreSigner) UnloadKey(id string) error {
 	return s.keyStore.UnloadKey(id)

@@ -32,8 +32,9 @@ type KeyFile struct {
 
 // Sr25519KeyPair holds the keypair for sr25519 operations
 type Sr25519KeyPair struct {
-	secretKey *schnorrkel.MiniSecretKey
-	publicKey []byte
+	secretKey       *schnorrkel.MiniSecretKey
+	publicKey       []byte
+	privateKeyBytes []byte // Temporary storage for imported private key bytes
 }
 
 // LoadSr25519KeyPair loads an sr25519 keypair from an encrypted file
@@ -129,6 +130,13 @@ func (kp *Sr25519KeyPair) Zero() error {
 			privateKeyBytes[i] = 0
 		}
 		kp.secretKey = nil
+	}
+	// Clear private key bytes if present
+	if kp.privateKeyBytes != nil {
+		for i := range kp.privateKeyBytes {
+			kp.privateKeyBytes[i] = 0
+		}
+		kp.privateKeyBytes = nil
 	}
 	return nil
 }

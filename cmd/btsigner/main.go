@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/bittensor-lab/btsigner/internal/config"
@@ -24,6 +25,9 @@ func main() {
 	keyID := flag.String("key-id", "", "Key ID to use (with keystore)")
 	genKey := flag.Bool("genkey", false, "Generate a new key")
 	checkKey := flag.Bool("check-key", false, "Check a key without starting the server")
+	importKey := flag.Bool("import", false, "Import a key from bittensor wallet files")
+	coldkeyPath := flag.String("coldkey", "", "Path to coldkey file (required for import)")
+	coldkeyPubPath := flag.String("coldkeypub", "", "Path to coldkeypub.txt file (required for import)")
 	flag.Parse()
 
 	// Initialize logger
@@ -112,6 +116,78 @@ func main() {
 
 			logger.Info("Generated new key",
 				zap.String("key_id", *keyID),
+				zap.String("ss58_address", ss58Addr))
+
+			return
+		}
+
+		// Import a key if requested
+		if *importKey {
+			if *keyID == "" {
+				logger.Fatal("Key ID is required when importing a key")
+			}
+
+			if *coldkeyPath == "" || *coldkeyPubPath == "" {
+				logger.Fatal("Both --coldkey and --coldkeypub paths are required for import")
+			}
+
+			var coldkeyPassword []byte
+			var keystorePassword []byte
+
+			// Check for password in environment variable (for testing)
+			if envPassword := os.Getenv("BTSIGNER_PASSWORD"); envPassword != "" {
+				coldkeyPassword = []byte(envPassword)
+				keystorePassword = []byte(envPassword)
+			} else {
+				// Check if the coldkey is encrypted
+				coldkeyData, err := os.ReadFile(*coldkeyPath)
+				if err != nil {
+					logger.Fatal("Failed to read coldkey file", zap.Error(err))
+				}
+
+				if strings.HasPrefix(string(coldkeyData), "$NACL") {
+					// Interactive password entry for encrypted coldkey
+					fmt.Print("Enter password to decrypt coldkey: ")
+					coldkeyPassword, err = term.ReadPassword(int(syscall.Stdin))
+					if err != nil {
+						logger.Fatal("Failed to read password", zap.Error(err))
+					}
+					fmt.Println()
+				} else {
+					// Passwordless coldkey - use empty password
+					coldkeyPassword = []byte("")
+					fmt.Println("Importing passwordless coldkey...")
+				}
+
+				// Ask for keystore password
+				fmt.Print("Enter password to encrypt key in keystore: ")
+				keystorePassword, err = term.ReadPassword(int(syscall.Stdin))
+				if err != nil {
+					logger.Fatal("Failed to read keystore password", zap.Error(err))
+				}
+				fmt.Println()
+			}
+
+			err = keyStoreSigner.ImportKey(*keyID, *coldkeyPath, *coldkeyPubPath, coldkeyPassword, keystorePassword)
+			if err != nil {
+				logger.Fatal("Failed to import key",
+					zap.String("key_id", *keyID),
+					zap.String("coldkey_path", *coldkeyPath),
+					zap.String("coldkeypub_path", *coldkeyPubPath),
+					zap.Error(err))
+			}
+
+			_, ss58Addr, err := keyStoreSigner.GetPublicKeyByID(*keyID)
+			if err != nil {
+				logger.Fatal("Failed to get public key",
+					zap.String("key_id", *keyID),
+					zap.Error(err))
+			}
+
+			logger.Info("Imported key",
+				zap.String("key_id", *keyID),
+				zap.String("coldkey_path", *coldkeyPath),
+				zap.String("coldkeypub_path", *coldkeyPubPath),
 				zap.String("ss58_address", ss58Addr))
 
 			return
