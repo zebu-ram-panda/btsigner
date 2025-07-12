@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"strings"
 )
 
 func TestKeyStore(t *testing.T) {
@@ -36,14 +37,112 @@ func TestKeyStore(t *testing.T) {
 		}
 		if ks.metadata.Version != 1 {
 			t.Errorf("Expected version 1, got %d", ks.metadata.Version)
-		}
-	})
+				}
+			})
 
-	// Create a keystore for the remaining tests
-	ks, err := NewKeyStore(tmpDir)
-	if err != nil {
-		t.Fatalf("Failed to create keystore: %v", err)
-	}
+			// Test NewKeyStore with directory creation failure
+			t.Run("NewKeyStore_MkdirAllFailure", func(t *testing.T) {
+				// Use a path that will cause MkdirAll to fail (e.g., trying to create a directory inside a non-existent file)
+				invalidPath := filepath.Join("/nonexistent_file", "keystore_dir")
+				_, err := NewKeyStore(invalidPath)
+				if err == nil {
+					t.Error("Expected error for MkdirAll failure, got nil")
+				}
+				if err != nil && !strings.Contains(err.Error(), "failed to create key store directory") {
+					t.Errorf("Expected 'failed to create key store directory' error, got: %v", err)
+				}
+			})
+
+			// Test NewKeyStore with metadata read failure
+			t.Run("NewKeyStore_MetadataReadFailure", func(t *testing.T) {
+				// Create a dummy metadata file that is not readable
+				metadataPath := filepath.Join(tmpDir, "metadata.json")
+				err := os.WriteFile(metadataPath, []byte("invalid json"), 0600) // Create a file with invalid JSON
+				if err != nil {
+					t.Fatalf("Failed to create invalid metadata file: %v", err)
+				}
+				defer os.Remove(metadataPath)
+
+				_, err = NewKeyStore(tmpDir)
+				if err == nil {
+					t.Error("Expected error for metadata read failure, got nil")
+				}
+				// Check for any error, as the exact error message might vary across OS
+				if err != nil && !strings.Contains(err.Error(), "failed to parse metadata") {
+					t.Errorf("Expected 'failed to parse metadata' error, got: %v", err)
+				}
+				})
+
+
+			// Test NewKeyStore with metadata unmarshal failure
+			t.Run("NewKeyStore_MetadataUnmarshalFailure", func(t *testing.T) {
+				// Create a dummy metadata file with invalid JSON
+				metadataPath := filepath.Join(tmpDir, "metadata.json")
+				err := os.WriteFile(metadataPath, []byte("invalid json"), 0600)
+				if err != nil {
+					t.Fatalf("Failed to create invalid metadata file: %v", err)
+				}
+				defer os.Remove(metadataPath)
+
+				_, err = NewKeyStore(tmpDir)
+				if err == nil {
+					t.Error("Expected error for metadata unmarshal failure, got nil")
+				}
+				if err != nil && !strings.Contains(err.Error(), "failed to parse metadata") {
+					t.Errorf("Expected 'failed to parse metadata' error, got: %v", err)
+				}
+			})
+
+			// Test NewKeyStore with metadata write failure (when creating new metadata)
+			t.Run("NewKeyStore_MetadataWriteFailure", func(t *testing.T) {
+				// Create a read-only directory and try to create a new keystore in it
+				readOnlyDir := t.TempDir()
+				err := os.Chmod(readOnlyDir, 0500) // Read-only permissions
+				if err != nil {
+					t.Fatalf("Failed to chmod directory: %v", err)
+				}
+				defer os.Chmod(readOnlyDir, 0700) // Change back to writable for cleanup
+
+				_, err = NewKeyStore(readOnlyDir)
+				if err == nil {
+					t.Error("Expected error for metadata write failure, got nil")
+				}
+				if err != nil && !strings.Contains(err.Error(), "failed to write metadata") {
+											t.Errorf("Expected 'failed to write metadata' error, got: %v", err)
+					}
+				})
+
+				// Test saveMetadata error
+				t.Run("SaveMetadataError", func(t *testing.T) {
+					// Create a mock KeyStore that returns an error on saveMetadata
+					mockKs := &KeyStore{
+						basePath: tmpDir,
+						metadata: KeyStoreMetadata{Version: 1, KeyCount: 0, KeyEntries: make(map[string]string)},
+						keys:     make(map[string]*Sr25519KeyPair),
+					}
+					// Make the metadata file unwriteable
+					metadataPath := filepath.Join(tmpDir, "metadata.json")
+					err := os.WriteFile(metadataPath, []byte("dummy"), 0400) // Read-only
+					if err != nil {
+						t.Fatalf("Failed to create read-only metadata file: %v", err)
+					}
+					defer os.Remove(metadataPath)
+
+					err = mockKs.saveMetadata()
+					if err == nil {
+						t.Error("Expected error from saveMetadata, got nil")
+					}
+					if err != nil && !strings.Contains(err.Error(), "permission denied") {
+						t.Errorf("Expected 'permission denied' error, got: %v", err)
+					}
+				})
+
+				// Create a keystore for the remaining tests
+				ks, err := NewKeyStore(tmpDir)
+				if err != nil {
+					t.Fatalf("Failed to create keystore: %v", err)
+				}
+
 
 	// Test generating a key
 	var key1ID = "test_key_1"

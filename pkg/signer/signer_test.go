@@ -68,4 +68,13 @@ func TestSr25519Signer(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error with canceled context, got nil")
 	}
+
+	t.Run("Close with nil keyPair", func(t *testing.T) {
+		// Create a signer with a nil keyPair to test the Close method's nil check
+		nilSigner := &Sr25519Signer{keyPair: nil}
+		err := nilSigner.Close()
+		if err != nil {
+			t.Errorf("Expected nil error when closing with nil keyPair, got %v", err)
+		}
+	})
 }

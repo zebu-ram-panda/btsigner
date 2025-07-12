@@ -21,6 +21,7 @@ type ClientOptions struct {
 	TLSEnabled         bool
 	CAPath             string
 	CertPath           string
+	KeyPath            string
 	ServerNameOverride string
 	Timeout            time.Duration
 }
@@ -63,7 +64,7 @@ func NewSignerClient(opts *ClientOptions) (*SignerClient, error) {
 		}
 
 		if opts.CertPath != "" {
-			cert, err := tls.LoadX509KeyPair(opts.CertPath, opts.CertPath)
+			cert, err := tls.LoadX509KeyPair(opts.CertPath, opts.KeyPath)
 			if err != nil {
 				return nil, fmt.Errorf("failed to load client cert: %w", err)
 			}
