@@ -2,9 +2,9 @@ package server
 
 import (
 	"context"
+	"errors"
 	"os"
 	"testing"
-	"errors"
 
 	"github.com/bittensor-lab/btsigner/internal/config"
 	"github.com/bittensor-lab/btsigner/pkg/signer"
@@ -37,10 +37,10 @@ func (m *MockSigner) Close() error {
 // MockKeyStoreSigner implements the signer.Signer and KeyStoreSigner interfaces for testing
 type MockKeyStoreSigner struct {
 	*MockSigner
-	mockListKeyIDs     func() []string
-	mockDefaultKeyID   func() string
+	mockListKeyIDs       func() []string
+	mockDefaultKeyID     func() string
 	mockGetPublicKeyByID func(id string) ([]byte, string, error)
-	mockSignWithKey    func(ctx context.Context, id string, payload []byte) ([]byte, error)
+	mockSignWithKey      func(ctx context.Context, id string, payload []byte) ([]byte, error)
 }
 
 func (m *MockKeyStoreSigner) ListKeyIDs() []string {
@@ -392,22 +392,22 @@ func TestServerSignExtrinsicWithKey(t *testing.T) {
 	}
 
 	// Test SignExtrinsicWithKey with empty payload
-    _, err = srv.SignExtrinsicWithKey(context.Background(), &pb.SignExtrinsicWithKeyRequest{KeyId: keyID, Payload: []byte{}})
-    if err == nil {
-        t.Error("Expected error with empty payload, got nil")
-    }
-    if err != nil && err.Error() != "payload cannot be empty" {
-        t.Errorf("Expected 'payload cannot be empty' error, got %v", err)
-    }
+	_, err = srv.SignExtrinsicWithKey(context.Background(), &pb.SignExtrinsicWithKeyRequest{KeyId: keyID, Payload: []byte{}})
+	if err == nil {
+		t.Error("Expected error with empty payload, got nil")
+	}
+	if err != nil && err.Error() != "payload cannot be empty" {
+		t.Errorf("Expected 'payload cannot be empty' error, got %v", err)
+	}
 
-    // Test SignExtrinsicWithKey with empty key ID
-    _, err = srv.SignExtrinsicWithKey(context.Background(), &pb.SignExtrinsicWithKeyRequest{KeyId: "", Payload: payload})
-    if err == nil {
-        t.Error("Expected error with empty key ID, got nil")
-    }
-    if err != nil && err.Error() != "key_id cannot be empty" {
-        t.Errorf("Expected 'key_id cannot be empty' error, got %v", err)
-    }
+	// Test SignExtrinsicWithKey with empty key ID
+	_, err = srv.SignExtrinsicWithKey(context.Background(), &pb.SignExtrinsicWithKeyRequest{KeyId: "", Payload: payload})
+	if err == nil {
+		t.Error("Expected error with empty key ID, got nil")
+	}
+	if err != nil && err.Error() != "key_id cannot be empty" {
+		t.Errorf("Expected 'key_id cannot be empty' error, got %v", err)
+	}
 
 	// Test SignExtrinsicWithKey with non-keystore signer
 	srv = NewServer(&MockSigner{}, config.DefaultConfig(), logger) // Use a non-keystore signer

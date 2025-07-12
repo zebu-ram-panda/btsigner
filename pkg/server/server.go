@@ -6,6 +6,7 @@ import (
 	"net"
 	"time"
 
+	"crypto/tls"
 	"github.com/bittensor-lab/btsigner/internal/config"
 	"github.com/bittensor-lab/btsigner/pkg/signer"
 	pb "github.com/bittensor-lab/btsigner/proto/signer/v1"
@@ -16,7 +17,6 @@ import (
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/protobuf/types/known/emptypb"
-	"crypto/tls"
 )
 
 // KeyStoreSigner defines the interface for keystore-specific functionality
@@ -31,9 +31,10 @@ type KeyStoreSigner interface {
 // Server implements the RemoteSigner gRPC service
 type Server struct {
 	pb.UnimplementedRemoteSignerServer
-	signer signer.Signer
-	config *config.Config
-	logger *zap.Logger
+	signer     signer.Signer
+	config     *config.Config
+	logger     *zap.Logger
+	grpcServer *grpc.Server
 }
 
 // NewServer creates a new server instance
@@ -71,23 +72,29 @@ func (s *Server) Run() error {
 		creds := credentials.NewTLS(&tls.Config{
 			Certificates: []tls.Certificate{tlsConfig.Cert},
 			ClientCAs:    tlsConfig.CACertPool,
-			MinVersion:   tlsConfig.MinVersion,
+			MinVersion:   tls.VersionTLS12,
 		})
 		opts = append(opts, grpc.Creds(creds))
 	}
 
 	// Create gRPC server
-	grpcServer := grpc.NewServer(opts...)
+	s.grpcServer = grpc.NewServer(opts...)
 
 	// Register services
-	pb.RegisterRemoteSignerServer(grpcServer, s)
+	pb.RegisterRemoteSignerServer(s.grpcServer, s)
 	healthServer := NewHealthServer()
-	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
-	reflection.Register(grpcServer)
+	grpc_health_v1.RegisterHealthServer(s.grpcServer, healthServer)
+	reflection.Register(s.grpcServer)
 
 	// Start server
 	s.logger.Info("Starting gRPC server", zap.String("address", s.config.Server.Address))
-	return grpcServer.Serve(lis)
+	return s.grpcServer.Serve(lis)
+}
+
+// GracefulStop stops the gRPC server gracefully
+func (s *Server) GracefulStop() {
+	s.logger.Info("Stopping gRPC server gracefully")
+	s.grpcServer.GracefulStop()
 }
 
 // GetPublicKey returns the public key of the signer

@@ -40,7 +40,6 @@ func (s *KeyStoreSigner) DefaultKeyID() string {
 	return s.defaultKeyID
 }
 
-
 // LoadKey loads a key with the given ID and password
 func (s *KeyStoreSigner) LoadKey(id string, password []byte) error {
 	_, err := s.keyStore.LoadKey(id, func() (*crypto.SecureBytes, error) {

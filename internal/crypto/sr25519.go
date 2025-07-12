@@ -1,6 +1,5 @@
 package crypto
 
-
 import (
 	"crypto/aes"
 	"crypto/cipher"
@@ -38,6 +37,7 @@ type Sr25519KeyPair struct {
 
 // LoadSr25519KeyPair loads an sr25519 keypair from an encrypted file
 func LoadSr25519KeyPair(path string, passwordProvider func() (*SecureBytes, error)) (*Sr25519KeyPair, error) {
+	path = filepath.Clean(path)
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read key file: %w", err)
@@ -119,7 +119,6 @@ func (kp *Sr25519KeyPair) Sign(message []byte) ([]byte, error) {
 	sigBytes := sig.Encode()
 	return sigBytes[:], nil
 }
-
 
 // Zero wipes the secret key material from memory
 func (kp *Sr25519KeyPair) Zero() error {

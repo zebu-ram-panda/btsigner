@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
 	"syscall"
 
 	"github.com/bittensor-lab/btsigner/internal/config"
@@ -33,7 +34,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Failed to initialize logger: %v\n", err)
 		os.Exit(1)
 	}
-	defer logger.Sync()
+		_ = logger.Sync()
 
 	// Load configuration
 	cfg, err := config.LoadConfig(*configPath)
@@ -169,7 +170,9 @@ func main() {
 
 			fmt.Print("Enter key ID to use: ")
 			var selectedKeyID string
-			fmt.Scanln(&selectedKeyID)
+			if _, err := fmt.Scanln(&selectedKeyID); err != nil {
+				logger.Fatal("Failed to read key ID", zap.Error(err))
+			}
 
 			var password []byte
 
@@ -301,6 +304,17 @@ func main() {
 
 	// Create and run server
 	srv := server.NewServer(signerImpl, cfg, logger)
+
+	// Set up signal handling for graceful shutdown
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		<-ch
+		srv.GracefulStop()
+		logger.Info("Server stopped gracefully")
+	}()
+
 	if err := srv.Run(); err != nil {
 		logger.Fatal("Server error", zap.Error(err))
 	}

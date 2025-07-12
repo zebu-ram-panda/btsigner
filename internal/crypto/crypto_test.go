@@ -14,7 +14,6 @@ const (
 	testKeyPath  = "test_key.json"
 )
 
-
 func TestKeyGeneration(t *testing.T) {
 	// Generate a key
 	keyPair, err := GenerateKeyFile(testKeyPath, func() (*SecureBytes, error) {
@@ -181,13 +180,12 @@ func TestLoadSr25519KeyPairErrorCases(t *testing.T) {
 	// Test loading a key file with invalid JSON
 	t.Run("InvalidJSON", func(t *testing.T) {
 		invalidJsonPath := "invalid_key.json"
-		err := os.WriteFile(invalidJsonPath, []byte("invalid json"), 0600)
-		if err != nil {
+		if err := os.WriteFile(invalidJsonPath, []byte("invalid json"), 0600); err != nil {
 			t.Fatalf("Failed to write invalid JSON file: %v", err)
 		}
 		defer os.Remove(invalidJsonPath)
 
-		_, err = LoadSr25519KeyPair(invalidJsonPath, func() (*SecureBytes, error) {
+		_, err := LoadSr25519KeyPair(invalidJsonPath, func() (*SecureBytes, error) {
 			return NewSecureBytes([]byte(testPassword)), nil
 		})
 		if err == nil {
@@ -214,8 +212,10 @@ func TestLoadSr25519KeyPairErrorCases(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to read key file: %v", err)
 		}
-		var keyFile KeyFile
-		json.Unmarshal(data, &keyFile)
+				var keyFile KeyFile
+		if err := json.Unmarshal(data, &keyFile); err != nil {
+			t.Fatalf("Failed to unmarshal key file: %v", err)
+		}
 		keyFile.Ciphertext[0] = ^keyFile.Ciphertext[0] // Corrupt first byte
 		corruptedData, _ := json.Marshal(keyFile)
 		os.WriteFile(testKeyPath, corruptedData, 0600)
@@ -269,14 +269,13 @@ func TestGenerateKeyFileErrorCases(t *testing.T) {
 	t.Run("WriteFileFailure", func(t *testing.T) {
 		// Create a read-only directory
 		readOnlyDir := t.TempDir()
-		err := os.Chmod(readOnlyDir, 0400) // Make it read-only
-		if err != nil {
+		if err := os.Chmod(readOnlyDir, 0500); err != nil {
 			t.Fatalf("Failed to chmod directory: %v", err)
-		}
+		} // Make it read-only
 		defer os.Chmod(readOnlyDir, 0700) // Change back to writable for cleanup
 
 		filePath := filepath.Join(readOnlyDir, "test_key.json")
-		_, err = GenerateKeyFile(filePath, func() (*SecureBytes, error) {
+		_, err := GenerateKeyFile(filePath, func() (*SecureBytes, error) {
 			return NewSecureBytes([]byte(testPassword)), nil
 		})
 		if err == nil {
@@ -287,5 +286,3 @@ func TestGenerateKeyFileErrorCases(t *testing.T) {
 		}
 	})
 }
-
-

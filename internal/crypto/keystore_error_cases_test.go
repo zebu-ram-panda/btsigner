@@ -1,4 +1,3 @@
-
 package crypto
 
 import (
@@ -9,7 +8,6 @@ import (
 	"strings"
 	"testing"
 )
-
 
 func TestKeyStoreErrorCases(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "keystore-test-errors")

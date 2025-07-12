@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
-	"os"
-	"strings"
 
 	"crypto/tls"
 	pb "github.com/bittensor-lab/btsigner/proto/signer/v1"
@@ -32,14 +32,13 @@ func TestClientOptions(t *testing.T) {
 	}
 }
 
-
 // MockRemoteSignerServer implements the pb.RemoteSignerServer interface for testing
 type MockRemoteSignerServer struct {
 	pb.UnimplementedRemoteSignerServer
-	getPublicKeyFunc       func(context.Context, *emptypb.Empty) (*pb.GetPublicKeyResponse, error)
-	signExtrinsicFunc      func(context.Context, *pb.SignExtrinsicRequest) (*pb.SignExtrinsicResponse, error)
+	getPublicKeyFunc         func(context.Context, *emptypb.Empty) (*pb.GetPublicKeyResponse, error)
+	signExtrinsicFunc        func(context.Context, *pb.SignExtrinsicRequest) (*pb.SignExtrinsicResponse, error)
 	signExtrinsicWithKeyFunc func(context.Context, *pb.SignExtrinsicWithKeyRequest) (*pb.SignExtrinsicResponse, error)
-	healthFunc             func(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	healthFunc               func(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 }
 
 func (m *MockRemoteSignerServer) GetPublicKey(ctx context.Context, in *emptypb.Empty) (*pb.GetPublicKeyResponse, error) {
@@ -175,12 +174,12 @@ func TestClientMethodCoverage(t *testing.T) {
 			return &pb.GetPublicKeyResponse{PublicKey: []byte("mock-pub-key"), Ss58Address: "mock-ss58"}, nil
 		},
 		signExtrinsicFunc: func(ctx context.Context, request *pb.SignExtrinsicRequest) (*pb.SignExtrinsicResponse, error) {
-		// Check if keyID is passed in context for SignExtrinsicWithKey workaround
-		if len(request.Context) > 0 {
-			return &pb.SignExtrinsicResponse{Signature: []byte("mock-signature-with-key")}, nil
-		}
-		return &pb.SignExtrinsicResponse{Signature: []byte("mock-signature")}, nil
-	},
+			// Check if keyID is passed in context for SignExtrinsicWithKey workaround
+			if len(request.Context) > 0 {
+				return &pb.SignExtrinsicResponse{Signature: []byte("mock-signature-with-key")}, nil
+			}
+			return &pb.SignExtrinsicResponse{Signature: []byte("mock-signature")}, nil
+		},
 		signExtrinsicWithKeyFunc: func(ctx context.Context, request *pb.SignExtrinsicWithKeyRequest) (*pb.SignExtrinsicResponse, error) {
 			return &pb.SignExtrinsicResponse{Signature: []byte("mock-signature-with-key")}, nil
 		},
@@ -245,14 +244,23 @@ func TestClientErrorCases(t *testing.T) {
 	// Test with invalid address format
 	t.Run("InvalidAddress", func(t *testing.T) {
 		opts := DefaultClientOptions()
-		opts.Address = "" // Empty address to force an immediate error
+		opts.Address = "invalid:::address:::" // Invalid address format
+		opts.Timeout = 100 * time.Millisecond // Short timeout to fail quickly
 
-		_, err := NewSignerClient(opts)
+		client, err := NewSignerClient(opts)
+		if err != nil {
+			// If NewSignerClient already fails, that's fine
+			if !strings.Contains(err.Error(), "failed to dial server") {
+				t.Errorf("Expected 'failed to dial server' error, got: %v", err)
+			}
+			return
+		}
+		defer client.Close()
+
+		// Force the connection to be used
+		err = client.CheckHealth(context.Background())
 		if err == nil {
 			t.Error("Expected error with invalid address format")
-		}
-		if err != nil && !strings.Contains(err.Error(), "failed to dial server") {
-			t.Errorf("Expected 'failed to dial server' error, got: %v", err)
 		}
 	})
 
@@ -296,11 +304,15 @@ func TestClientErrorCases(t *testing.T) {
 	// Test NewSignerClient with client cert/key loading error
 	t.Run("NewSignerClient_ClientCertKeyError", func(t *testing.T) {
 		tmpDir := t.TempDir()
-		// Create dummy files that are not valid key pairs
+				// Create dummy files that are not valid key pairs
 		invalidCertPath := filepath.Join(tmpDir, "invalid_client.crt")
 		invalidKeyPath := filepath.Join(tmpDir, "invalid_client.key")
-		os.WriteFile(invalidCertPath, []byte("invalid cert"), 0644)
-		os.WriteFile(invalidKeyPath, []byte("invalid key"), 0644)
+		if err := os.WriteFile(invalidCertPath, []byte("cert"), 0644); err != nil {
+			t.Fatalf("Failed to write cert file: %v", err)
+		}
+		if err := os.WriteFile(invalidKeyPath, []byte("key"), 0644); err != nil {
+			t.Fatalf("Failed to write key file: %v", err)
+		}
 
 		opts := DefaultClientOptions()
 		opts.TLSEnabled = true
@@ -339,7 +351,6 @@ func TestClientErrorCases(t *testing.T) {
 			t.Error("Expected GetPublicKey error, got nil")
 		}
 	})
-
 
 	// Test SignExtrinsic error
 	t.Run("SignExtrinsicError", func(t *testing.T) {

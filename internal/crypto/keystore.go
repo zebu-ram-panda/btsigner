@@ -85,7 +85,6 @@ func (ks *KeyStore) saveMetadata() error {
 	return os.WriteFile(metadataPath, data, 0600)
 }
 
-
 // GenerateKey generates a new key with the given ID and password
 func (ks *KeyStore) GenerateKey(id string, passwordProvider func() (*SecureBytes, error)) (*Sr25519KeyPair, error) {
 	if id == "" {
