@@ -304,7 +304,7 @@ func TestClientErrorCases(t *testing.T) {
 	// Test NewSignerClient with client cert/key loading error
 	t.Run("NewSignerClient_ClientCertKeyError", func(t *testing.T) {
 		tmpDir := t.TempDir()
-				// Create dummy files that are not valid key pairs
+		// Create dummy files that are not valid key pairs
 		invalidCertPath := filepath.Join(tmpDir, "invalid_client.crt")
 		invalidKeyPath := filepath.Join(tmpDir, "invalid_client.key")
 		if err := os.WriteFile(invalidCertPath, []byte("cert"), 0644); err != nil {

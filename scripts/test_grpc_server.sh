@@ -39,7 +39,7 @@ print_error() {
 # Cleanup function
 cleanup() {
     print_info "Cleaning up..."
-    
+
     if [ -f "$SERVER_PID_FILE" ]; then
         SERVER_PID=$(cat "$SERVER_PID_FILE")
         if kill -0 "$SERVER_PID" 2>/dev/null; then
@@ -49,7 +49,7 @@ cleanup() {
         fi
         rm -f "$SERVER_PID_FILE"
     fi
-    
+
     # Clean up test files
     rm -rf "$KEYSTORE_PATH" "$CONFIG_FILE" 2>/dev/null || true
     print_info "Cleanup completed"
@@ -86,14 +86,14 @@ print_info "Step 2: Creating server configuration..."
 cat > "$CONFIG_FILE" << EOF
 server:
   address: "$SERVER_ADDRESS"
-  
+
 tls:
   enabled: false
-  
+
 keystore:
   path: "$KEYSTORE_PATH"
   default_key_id: "validator-key"
-  
+
 logging:
   level: "info"
   format: "json"
@@ -245,4 +245,4 @@ echo "✅ SignExtrinsicWithKey (all keys)"
 echo "✅ Stress test ($STRESS_COUNT operations)"
 echo "✅ Error handling"
 echo ""
-echo "🎉 gRPC server is fully functional!" 
+echo "🎉 gRPC server is fully functional!"

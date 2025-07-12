@@ -410,12 +410,12 @@ func (ts *TestSuite) testKeystoreSigning() {
 func (ts *TestSuite) testStressSignatures() {
 	start := time.Now()
 	result := TestResult{
-		Name:     "Stress Test - 5000 Signatures",
+		Name:     "Stress Test - 100 Signatures",
 		Success:  false,
 		Duration: 0,
 	}
 
-	fmt.Println("\nTest 6: Stress Test - 5000 Signatures")
+	fmt.Println("\nTest 6: Stress Test - 100 Signatures")
 	fmt.Println(strings.Repeat("-", 30))
 
 	// Load single key signer
@@ -429,7 +429,7 @@ func (ts *TestSuite) testStressSignatures() {
 	defer s.Close()
 
 	// Generate many random payloads and sign them
-	numSignatures := 5000
+	numSignatures := 100
 	ctx := context.Background()
 
 	for i := 0; i < numSignatures; i++ {

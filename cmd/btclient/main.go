@@ -16,6 +16,7 @@ func main() {
 	tls := flag.Bool("tls", false, "Use TLS")
 	caFile := flag.String("ca", "", "Path to CA certificate")
 	certFile := flag.String("cert", "", "Path to client certificate")
+	keyFile := flag.String("key", "", "Path to client key")
 	serverName := flag.String("server-name", "", "Server name override for TLS")
 
 	getPublicKey := flag.Bool("get-public-key", false, "Get the public key")
@@ -31,6 +32,7 @@ func main() {
 	opts.TLSEnabled = *tls
 	opts.CAPath = *caFile
 	opts.CertPath = *certFile
+	opts.KeyPath = *keyFile
 	opts.ServerNameOverride = *serverName
 
 	// Create client

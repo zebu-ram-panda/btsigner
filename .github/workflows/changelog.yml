@@ -36,4 +36,4 @@ jobs:
             git add CHANGELOG.md
             git commit -m "docs: update CHANGELOG.md [skip ci]"
             git push
-          fi 
+          fi

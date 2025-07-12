@@ -212,7 +212,7 @@ func TestLoadSr25519KeyPairErrorCases(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to read key file: %v", err)
 		}
-				var keyFile KeyFile
+		var keyFile KeyFile
 		if err := json.Unmarshal(data, &keyFile); err != nil {
 			t.Fatalf("Failed to unmarshal key file: %v", err)
 		}

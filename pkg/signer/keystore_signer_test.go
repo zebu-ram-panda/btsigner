@@ -279,7 +279,7 @@ func TestKeyStoreSignerConcurrentAccess(t *testing.T) {
 	for i := 0; i < numKeys; i++ {
 		keyID := fmt.Sprintf("test_key_%d", i)
 		keyIDs[i] = keyID
-		
+
 		err := signer.GenerateKey(keyID, password)
 		if err != nil {
 			t.Fatalf("Failed to generate key %s: %v", keyID, err)
@@ -301,23 +301,23 @@ func TestKeyStoreSignerConcurrentAccess(t *testing.T) {
 	// Test concurrent SetDefaultKeyID and DefaultKeyID
 	t.Run("ConcurrentDefaultKeyAccess", func(t *testing.T) {
 		var wg sync.WaitGroup
-		
+
 		// Start multiple goroutines that set default key
 		for i := 0; i < numGoroutines; i++ {
 			wg.Add(1)
 			go func(goroutineID int) {
 				defer wg.Done()
-				
+
 				for j := 0; j < numOperations; j++ {
 					keyID := keyIDs[j%len(keyIDs)]
 					signer.SetDefaultKeyID(keyID)
-					
+
 					// Read the default key ID
 					defaultKeyID := signer.DefaultKeyID()
 					if defaultKeyID == "" {
 						t.Errorf("Default key ID should not be empty")
 					}
-					
+
 					// Verify it's one of our keys
 					found := false
 					for _, validKeyID := range keyIDs {
@@ -332,7 +332,7 @@ func TestKeyStoreSignerConcurrentAccess(t *testing.T) {
 				}
 			}(i)
 		}
-		
+
 		wg.Wait()
 	})
 
@@ -341,30 +341,30 @@ func TestKeyStoreSignerConcurrentAccess(t *testing.T) {
 		var wg sync.WaitGroup
 		ctx := context.Background()
 		payload := []byte("test message for concurrent signing")
-		
+
 		// Start multiple goroutines that sign concurrently
 		for i := 0; i < numGoroutines; i++ {
 			wg.Add(1)
 			go func(goroutineID int) {
 				defer wg.Done()
-				
+
 				for j := 0; j < numOperations; j++ {
 					keyID := keyIDs[j%len(keyIDs)]
-					
+
 					// Sign with specific key
 					signature, err := signer.SignWithKey(ctx, keyID, payload)
 					if err != nil {
 						t.Errorf("Failed to sign with key %s: %v", keyID, err)
 						return
 					}
-					
+
 					if len(signature) == 0 {
 						t.Errorf("Signature should not be empty for key %s", keyID)
 					}
 				}
 			}(i)
 		}
-		
+
 		wg.Wait()
 	})
 
@@ -373,30 +373,30 @@ func TestKeyStoreSignerConcurrentAccess(t *testing.T) {
 		var wg sync.WaitGroup
 		ctx := context.Background()
 		payload := []byte("test message for concurrent default signing")
-		
+
 		// Set a default key
 		signer.SetDefaultKeyID(keyIDs[0])
-		
+
 		// Start multiple goroutines that sign with default key
 		for i := 0; i < numGoroutines; i++ {
 			wg.Add(1)
 			go func(goroutineID int) {
 				defer wg.Done()
-				
+
 				for j := 0; j < numOperations; j++ {
 					signature, err := signer.Sign(ctx, payload)
 					if err != nil {
 						t.Errorf("Failed to sign with default key: %v", err)
 						return
 					}
-					
+
 					if len(signature) == 0 {
 						t.Errorf("Signature should not be empty")
 					}
 				}
 			}(i)
 		}
-		
+
 		wg.Wait()
 	})
 
@@ -405,16 +405,16 @@ func TestKeyStoreSignerConcurrentAccess(t *testing.T) {
 		var wg sync.WaitGroup
 		ctx := context.Background()
 		payload := []byte("test message for mixed operations")
-		
+
 		// Start goroutines that do different operations
 		for i := 0; i < numGoroutines; i++ {
 			wg.Add(1)
 			go func(goroutineID int) {
 				defer wg.Done()
-				
+
 				for j := 0; j < numOperations; j++ {
 					keyID := keyIDs[j%len(keyIDs)]
-					
+
 					switch j % 4 {
 					case 0:
 						// Set default key
@@ -441,7 +441,7 @@ func TestKeyStoreSignerConcurrentAccess(t *testing.T) {
 				}
 			}(i)
 		}
-		
+
 		wg.Wait()
 	})
 }

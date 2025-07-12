@@ -34,7 +34,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Failed to initialize logger: %v\n", err)
 		os.Exit(1)
 	}
-		_ = logger.Sync()
+	_ = logger.Sync()
 
 	// Load configuration
 	cfg, err := config.LoadConfig(*configPath)

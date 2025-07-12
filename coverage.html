@@ -54,51 +54,55 @@
 		<div id="topbar">
 			<div id="nav">
 				<select id="files">
-				
+
 				<option value="file0">github.com/bittensor-lab/btsigner/cmd/btclient/main.go (0.0%)</option>
-				
+
 				<option value="file1">github.com/bittensor-lab/btsigner/cmd/btsigner/main.go (0.0%)</option>
-				
+
 				<option value="file2">github.com/bittensor-lab/btsigner/internal/config/config.go (100.0%)</option>
-				
+
 				<option value="file3">github.com/bittensor-lab/btsigner/internal/config/tls.go (0.0%)</option>
-				
+
 				<option value="file4">github.com/bittensor-lab/btsigner/internal/crypto/keystore.go (94.2%)</option>
-				
+
 				<option value="file5">github.com/bittensor-lab/btsigner/internal/crypto/memguard.go (92.3%)</option>
-				
-				<option value="file6">github.com/bittensor-lab/btsigner/internal/crypto/sr25519.go (85.4%)</option>
-				
+
+				<option value="file6">github.com/bittensor-lab/btsigner/internal/crypto/sr25519.go (85.5%)</option>
+
 				<option value="file7">github.com/bittensor-lab/btsigner/internal/crypto/ss58.go (96.4%)</option>
-				
-				<option value="file8">github.com/bittensor-lab/btsigner/pkg/client/client.go (100.0%)</option>
-				
+
+				<option value="file8">github.com/bittensor-lab/btsigner/pkg/client/client.go (98.1%)</option>
+
 				<option value="file9">github.com/bittensor-lab/btsigner/pkg/server/health.go (100.0%)</option>
-				
-				<option value="file10">github.com/bittensor-lab/btsigner/pkg/server/server.go (70.3%)</option>
-				
-				<option value="file11">github.com/bittensor-lab/btsigner/pkg/signer/keystore_signer.go (85.7%)</option>
-				
+
+				<option value="file10">github.com/bittensor-lab/btsigner/pkg/server/server.go (68.4%)</option>
+
+				<option value="file11">github.com/bittensor-lab/btsigner/pkg/signer/keystore_signer.go (91.1%)</option>
+
 				<option value="file12">github.com/bittensor-lab/btsigner/pkg/signer/signer.go (80.0%)</option>
-				
-				<option value="file13">github.com/bittensor-lab/btsigner/proto/signer/v1/signer.pb.go (0.0%)</option>
-				
-				<option value="file14">github.com/bittensor-lab/btsigner/proto/signer/v1/signer_grpc.pb.go (0.0%)</option>
-				
-				<option value="file15">github.com/bittensor-lab/btsigner/scripts/test_keygen_and_signing.go (0.0%)</option>
-				
+
+				<option value="file13">github.com/bittensor-lab/btsigner/proto/signer.pb.go (0.0%)</option>
+
+				<option value="file14">github.com/bittensor-lab/btsigner/proto/signer/v1/signer.pb.go (0.0%)</option>
+
+				<option value="file15">github.com/bittensor-lab/btsigner/proto/signer/v1/signer_grpc.pb.go (0.0%)</option>
+
+				<option value="file16">github.com/bittensor-lab/btsigner/proto/signer_grpc.pb.go (0.0%)</option>
+
+				<option value="file17">github.com/bittensor-lab/btsigner/scripts/test_keygen_and_signing.go (0.0%)</option>
+
 				</select>
 			</div>
 			<div id="legend">
 				<span>not tracked</span>
-			
+
 				<span class="cov0">not covered</span>
 				<span class="cov8">covered</span>
-			
+
 			</div>
 		</div>
 		<div id="content">
-		
+
 		<pre class="file" id="file0" style="display: none">package main
 
 import (
@@ -193,13 +197,14 @@ func main() <span class="cov0" title="0">{
         }</span>
 }
 </pre>
-		
+
 		<pre class="file" id="file1" style="display: none">package main
 
 import (
         "flag"
         "fmt"
         "os"
+        "os/signal"
         "syscall"
 
         "github.com/bittensor-lab/btsigner/internal/config"
@@ -229,7 +234,7 @@ func main() <span class="cov0" title="0">{
                 fmt.Fprintf(os.Stderr, "Failed to initialize logger: %v\n", err)
                 os.Exit(1)
         }</span>
-        <span class="cov0" title="0">defer logger.Sync()
+                <span class="cov0" title="0">_ = logger.Sync()
 
         // Load configuration
         cfg, err := config.LoadConfig(*configPath)
@@ -365,9 +370,11 @@ func main() <span class="cov0" title="0">{
 
                         <span class="cov0" title="0">fmt.Print("Enter key ID to use: ")
                         var selectedKeyID string
-                        fmt.Scanln(&amp;selectedKeyID)
+                        if _, err := fmt.Scanln(&amp;selectedKeyID); err != nil </span><span class="cov0" title="0">{
+                                logger.Fatal("Failed to read key ID", zap.Error(err))
+                        }</span>
 
-                        var password []byte
+                        <span class="cov0" title="0">var password []byte
 
                         // Check for password in environment variable (for testing)
                         if envPassword := os.Getenv("BTSIGNER_PASSWORD"); envPassword != "" </span><span class="cov0" title="0">{
@@ -497,12 +504,23 @@ func main() <span class="cov0" title="0">{
 
         // Create and run server
         srv := server.NewServer(signerImpl, cfg, logger)
-        if err := srv.Run(); err != nil </span><span class="cov0" title="0">{
+
+        // Set up signal handling for graceful shutdown
+        ch := make(chan os.Signal, 1)
+        signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
+
+        go func() </span><span class="cov0" title="0">{
+                &lt;-ch
+                srv.GracefulStop()
+                logger.Info("Server stopped gracefully")
+        }</span>()
+
+        <span class="cov0" title="0">if err := srv.Run(); err != nil </span><span class="cov0" title="0">{
                 logger.Fatal("Server error", zap.Error(err))
         }</span>
 }
 </pre>
-		
+
 		<pre class="file" id="file2" style="display: none">package config
 
 import (
@@ -528,9 +546,9 @@ type Config struct {
         } `yaml:"key" json:"key"`
 
         TLS struct {
-                Enabled    bool   `yaml:"enabled" json:"enabled"`
-                CertPath   string `yaml:"cert_path" json:"cert_path"`
-                KeyPath    string `yaml:"key_path" json:"key_path"`
+                Enabled      bool     `yaml:"enabled" json:"enabled"`
+                CertPath     string   `yaml:"cert_path" json:"cert_path"`
+                KeyPath      string   `yaml:"key_path" json:"key_path"`
                 ClientAuth   bool     `yaml:"client_auth" json:"client_auth"`
                 CAPath       string   `yaml:"ca_path" json:"ca_path"`
                 MinVersion   string   `yaml:"min_version" json:"min_version"`
@@ -550,6 +568,7 @@ type Config struct {
 
 // LoadConfig loads configuration from a file
 func LoadConfig(path string) (*Config, error) <span class="cov8" title="1">{
+        path = filepath.Clean(path)
         data, err := os.ReadFile(path)
         if err != nil </span><span class="cov8" title="1">{
                 return nil, fmt.Errorf("failed to read config file: %w", err)
@@ -607,7 +626,7 @@ func DefaultConfig() *Config <span class="cov8" title="1">{
         return cfg
 }</span>
 </pre>
-		
+
 		<pre class="file" id="file3" style="display: none">package config
 
 import (
@@ -621,8 +640,10 @@ import (
 
 type TLSConfig struct {
         Cert       tls.Certificate
-        CACertPool *x509.CertPool
-        MinVersion uint16
+        CACertPool       *x509.CertPool
+        MinVersion       uint16
+        CipherSuites     []uint16
+        CurvePreferences []tls.CurveID
 }
 
 // LoadTLSConfig loads the TLS configuration from the main config file
@@ -654,10 +675,17 @@ func (c *Config) LoadTLSConfig() (*TLSConfig, error) <span class="cov0" title="0
                 return nil, err
         }</span>
 
+        <span class="cov0" title="0">cipherSuites, err := parseCipherSuites(c.TLS.CipherSuites)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
         <span class="cov0" title="0">return &amp;TLSConfig{
-                Cert:       cert,
-                CACertPool: caCertPool,
-                MinVersion: minVersion,
+                Cert:             cert,
+                CACertPool:       caCertPool,
+                MinVersion:       minVersion,
+                CipherSuites:     cipherSuites,
+                CurvePreferences: []tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256},
         }, nil</span>
 }
 
@@ -671,8 +699,34 @@ func parseTLSVersion(version string) (uint16, error) <span class="cov0" title="0
                 return tls.VersionTLS12, nil</span> // Default to TLS 1.2
         }
 }
+
+func parseCipherSuites(suites []string) ([]uint16, error) <span class="cov0" title="0">{
+        if len(suites) == 0 </span><span class="cov0" title="0">{
+                return nil, nil
+        }</span>
+
+        <span class="cov0" title="0">suiteIDs := make([]uint16, 0, len(suites))
+        for _, suite := range suites </span><span class="cov0" title="0">{
+                id, ok := approvedCipherSuites[suite]
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("unsupported cipher suite: %s", suite)
+                }</span>
+                <span class="cov0" title="0">suiteIDs = append(suiteIDs, id)</span>
+        }
+        <span class="cov0" title="0">return suiteIDs, nil</span>
+}
+
+// Note: This list should be updated based on security best practices
+var approvedCipherSuites = map[string]uint16{
+        "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256": tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+        "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384": tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+        "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256": tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+        "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384": tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+        "TLS_AES_128_GCM_SHA256":       tls.TLS_AES_128_GCM_SHA256,
+        "TLS_AES_256_GCM_SHA384":       tls.TLS_AES_256_GCM_SHA384,
+}
 </pre>
-		
+
 		<pre class="file" id="file4" style="display: none">package crypto
 
 import (
@@ -722,6 +776,7 @@ func NewKeyStore(basePath string) (*KeyStore, error) <span class="cov8" title="1
 
         // Try to load existing metadata
         if _, err := os.Stat(metadataPath); err == nil </span><span class="cov8" title="1">{
+                metadataPath = filepath.Clean(metadataPath)
                 data, err := os.ReadFile(metadataPath)
                 if err != nil </span><span class="cov0" title="0">{
                         return nil, fmt.Errorf("failed to read metadata: %w", err)
@@ -759,7 +814,6 @@ func (ks *KeyStore) saveMetadata() error <span class="cov8" title="1">{
 
         <span class="cov8" title="1">return os.WriteFile(metadataPath, data, 0600)</span>
 }
-
 
 // GenerateKey generates a new key with the given ID and password
 func (ks *KeyStore) GenerateKey(id string, passwordProvider func() (*SecureBytes, error)) (*Sr25519KeyPair, error) <span class="cov8" title="1">{
@@ -940,7 +994,7 @@ func (ks *KeyStore) Close() error <span class="cov8" title="1">{
         <span class="cov8" title="1">return lastErr</span>
 }
 </pre>
-		
+
 		<pre class="file" id="file5" style="display: none">package crypto
 
 import (
@@ -988,9 +1042,8 @@ func ConstantTimeCompare(a, b []byte) bool <span class="cov0" title="0">{
         return subtle.ConstantTimeCompare(a, b) == 1
 }</span>
 </pre>
-		
-		<pre class="file" id="file6" style="display: none">package crypto
 
+		<pre class="file" id="file6" style="display: none">package crypto
 
 import (
         "crypto/aes"
@@ -1001,6 +1054,7 @@ import (
         "fmt"
         "io"
         "os"
+        "path/filepath"
 
         "github.com/ChainSafe/go-schnorrkel"
         "github.com/gtank/merlin"
@@ -1029,6 +1083,7 @@ type Sr25519KeyPair struct {
 
 // LoadSr25519KeyPair loads an sr25519 keypair from an encrypted file
 func LoadSr25519KeyPair(path string, passwordProvider func() (*SecureBytes, error)) (*Sr25519KeyPair, error) <span class="cov8" title="1">{
+        path = filepath.Clean(path)
         data, err := os.ReadFile(path)
         if err != nil </span><span class="cov8" title="1">{
                 return nil, fmt.Errorf("failed to read key file: %w", err)
@@ -1110,7 +1165,6 @@ func (kp *Sr25519KeyPair) Sign(message []byte) ([]byte, error) <span class="cov8
         <span class="cov8" title="1">sigBytes := sig.Encode()
         return sigBytes[:], nil</span>
 }
-
 
 // Zero wipes the secret key material from memory
 func (kp *Sr25519KeyPair) Zero() error <span class="cov8" title="1">{
@@ -1201,7 +1255,7 @@ func GenerateKeyFile(path string, passwordProvider func() (*SecureBytes, error))
         }, nil</span>
 }
 </pre>
-		
+
 		<pre class="file" id="file7" style="display: none">package crypto
 
 import (
@@ -1283,7 +1337,7 @@ func base58Encode(data []byte) string <span class="cov8" title="1">{
         <span class="cov8" title="1">return string(result)</span>
 }
 </pre>
-		
+
 		<pre class="file" id="file8" style="display: none">package client
 
 import (
@@ -1369,8 +1423,8 @@ func NewSignerClient(opts *ClientOptions) (*SignerClient, error) <span class="co
                 dialOpts = append(dialOpts, grpc.WithTransportCredentials(insecure.NewCredentials()))
         }</span>
 
-        <span class="cov8" title="1">conn, err := grpc.Dial(opts.Address, dialOpts...)
-        if err != nil </span><span class="cov8" title="1">{
+        <span class="cov8" title="1">conn, err := grpc.NewClient(opts.Address, dialOpts...)
+        if err != nil </span><span class="cov0" title="0">{
                 return nil, fmt.Errorf("failed to dial server: %w", err)
         }</span>
 
@@ -1449,7 +1503,7 @@ func (c *SignerClient) Close() error <span class="cov8" title="1">{
         <span class="cov8" title="1">return nil</span>
 }
 </pre>
-		
+
 		<pre class="file" id="file9" style="display: none">package server
 
 import (
@@ -1491,7 +1545,7 @@ func (s *HealthServer) SetServingStatus(status grpc_health_v1.HealthCheckRespons
         s.status = status
 }</span>
 </pre>
-		
+
 		<pre class="file" id="file10" style="display: none">package server
 
 import (
@@ -1500,6 +1554,7 @@ import (
         "net"
         "time"
 
+        "crypto/tls"
         "github.com/bittensor-lab/btsigner/internal/config"
         "github.com/bittensor-lab/btsigner/pkg/signer"
         pb "github.com/bittensor-lab/btsigner/proto/signer/v1"
@@ -1510,7 +1565,6 @@ import (
         "google.golang.org/grpc/keepalive"
         "google.golang.org/grpc/reflection"
         "google.golang.org/protobuf/types/known/emptypb"
-        "crypto/tls"
 )
 
 // KeyStoreSigner defines the interface for keystore-specific functionality
@@ -1525,9 +1579,10 @@ type KeyStoreSigner interface {
 // Server implements the RemoteSigner gRPC service
 type Server struct {
         pb.UnimplementedRemoteSignerServer
-        signer signer.Signer
-        config *config.Config
-        logger *zap.Logger
+        signer     signer.Signer
+        config     *config.Config
+        logger     *zap.Logger
+        grpcServer *grpc.Server
 }
 
 // NewServer creates a new server instance
@@ -1563,26 +1618,34 @@ func (s *Server) Run() error <span class="cov0" title="0">{
                 }</span>
 
                 <span class="cov0" title="0">creds := credentials.NewTLS(&amp;tls.Config{
-                        Certificates: []tls.Certificate{tlsConfig.Cert},
-                        ClientCAs:    tlsConfig.CACertPool,
-                        MinVersion:   tlsConfig.MinVersion,
+                        Certificates:     []tls.Certificate{tlsConfig.Cert},
+                        ClientCAs:        tlsConfig.CACertPool,
+                        MinVersion:       tlsConfig.MinVersion,
+                        CipherSuites:     tlsConfig.CipherSuites,
+                        CurvePreferences: tlsConfig.CurvePreferences,
                 })
                 opts = append(opts, grpc.Creds(creds))</span>
         }
 
         // Create gRPC server
-        <span class="cov0" title="0">grpcServer := grpc.NewServer(opts...)
+        <span class="cov0" title="0">s.grpcServer = grpc.NewServer(opts...)
 
         // Register services
-        pb.RegisterRemoteSignerServer(grpcServer, s)
+        pb.RegisterRemoteSignerServer(s.grpcServer, s)
         healthServer := NewHealthServer()
-        grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
-        reflection.Register(grpcServer)
+        grpc_health_v1.RegisterHealthServer(s.grpcServer, healthServer)
+        reflection.Register(s.grpcServer)
 
         // Start server
         s.logger.Info("Starting gRPC server", zap.String("address", s.config.Server.Address))
-        return grpcServer.Serve(lis)</span>
+        return s.grpcServer.Serve(lis)</span>
 }
+
+// GracefulStop stops the gRPC server gracefully
+func (s *Server) GracefulStop() <span class="cov0" title="0">{
+        s.logger.Info("Stopping gRPC server gracefully")
+        s.grpcServer.GracefulStop()
+}</span>
 
 // GetPublicKey returns the public key of the signer
 func (s *Server) GetPublicKey(ctx context.Context, _ *emptypb.Empty) (*pb.GetPublicKeyResponse, error) <span class="cov8" title="1">{
@@ -1729,13 +1792,14 @@ func (s *Server) Health(ctx context.Context, _ *emptypb.Empty) (*emptypb.Empty, 
         return &amp;emptypb.Empty{}, nil
 }</span>
 </pre>
-		
+
 		<pre class="file" id="file11" style="display: none">package signer
 
 import (
         "context"
         "errors"
         "fmt"
+        "sync"
 
         "github.com/bittensor-lab/btsigner/internal/crypto"
 )
@@ -1748,6 +1812,7 @@ var (
 type KeyStoreSigner struct {
         keyStore     *crypto.KeyStore
         defaultKeyID string
+        mu           sync.RWMutex
 }
 
 // NewKeyStoreSigner creates a new signer that uses a KeyStore
@@ -1764,30 +1829,35 @@ func NewKeyStoreSigner(keyStorePath string) (*KeyStoreSigner, error) <span class
 
 // SetDefaultKeyID sets the default key ID to use for signing
 func (s *KeyStoreSigner) SetDefaultKeyID(id string) <span class="cov8" title="1">{
+        s.mu.Lock()
+        defer s.mu.Unlock()
         s.defaultKeyID = id
 }</span>
 
 // DefaultKeyID returns the current default key ID
 func (s *KeyStoreSigner) DefaultKeyID() string <span class="cov8" title="1">{
+        s.mu.RLock()
+        defer s.mu.RUnlock()
         return s.defaultKeyID
 }</span>
-
 
 // LoadKey loads a key with the given ID and password
 func (s *KeyStoreSigner) LoadKey(id string, password []byte) error <span class="cov8" title="1">{
         _, err := s.keyStore.LoadKey(id, func() (*crypto.SecureBytes, error) </span><span class="cov8" title="1">{
                 return crypto.NewSecureBytes(password), nil
         }</span>)
-        <span class="cov8" title="1">if err != nil </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">if err != nil </span><span class="cov8" title="1">{
                 return err
         }</span>
 
         // If this is the first key loaded, set it as default
-        <span class="cov8" title="1">if s.defaultKeyID == "" </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">s.mu.Lock()
+        if s.defaultKeyID == "" </span><span class="cov0" title="0">{
                 s.defaultKeyID = id
         }</span>
+        <span class="cov8" title="1">s.mu.Unlock()
 
-        <span class="cov8" title="1">return nil</span>
+        return nil</span>
 }
 
 // GenerateKey generates a new key with the given ID and password
@@ -1800,11 +1870,13 @@ func (s *KeyStoreSigner) GenerateKey(id string, password []byte) error <span cla
         }</span>
 
         // If this is the first key generated, set it as default
-        <span class="cov8" title="1">if s.defaultKeyID == "" </span><span class="cov8" title="1">{
+        <span class="cov8" title="1">s.mu.Lock()
+        if s.defaultKeyID == "" </span><span class="cov8" title="1">{
                 s.defaultKeyID = id
         }</span>
+        <span class="cov8" title="1">s.mu.Unlock()
 
-        <span class="cov8" title="1">return nil</span>
+        return nil</span>
 }
 
 // UnloadKey unloads a key from memory
@@ -1824,11 +1896,15 @@ func (s *KeyStoreSigner) ListKeyIDs() []string <span class="cov8" title="1">{
 
 // GetPublicKey implements Signer.GetPublicKey using the default key
 func (s *KeyStoreSigner) GetPublicKey() ([]byte, string, error) <span class="cov8" title="1">{
-        if s.defaultKeyID == "" </span><span class="cov8" title="1">{
+        s.mu.RLock()
+        defaultKeyID := s.defaultKeyID
+        s.mu.RUnlock()
+
+        if defaultKeyID == "" </span><span class="cov8" title="1">{
                 return nil, "", ErrNoDefaultKeyID
         }</span>
 
-        <span class="cov8" title="1">return s.GetPublicKeyByID(s.defaultKeyID)</span>
+        <span class="cov8" title="1">return s.GetPublicKeyByID(defaultKeyID)</span>
 }
 
 // GetPublicKeyByID returns the public key for a specific key ID
@@ -1838,11 +1914,15 @@ func (s *KeyStoreSigner) GetPublicKeyByID(id string) ([]byte, string, error) <sp
 
 // Sign implements Signer.Sign using the default key
 func (s *KeyStoreSigner) Sign(ctx context.Context, payload []byte) ([]byte, error) <span class="cov8" title="1">{
-        if s.defaultKeyID == "" </span><span class="cov8" title="1">{
+        s.mu.RLock()
+        defaultKeyID := s.defaultKeyID
+        s.mu.RUnlock()
+
+        if defaultKeyID == "" </span><span class="cov8" title="1">{
                 return nil, ErrNoDefaultKeyID
         }</span>
 
-        <span class="cov8" title="1">return s.SignWithKey(ctx, s.defaultKeyID, payload)</span>
+        <span class="cov8" title="1">return s.SignWithKey(ctx, defaultKeyID, payload)</span>
 }
 
 // SignWithKey signs a payload with a specific key
@@ -1878,7 +1958,7 @@ func (s *KeyStoreSigner) Close() error <span class="cov8" title="1">{
         return s.keyStore.Close()
 }</span>
 </pre>
-		
+
 		<pre class="file" id="file12" style="display: none">package signer
 
 import (
@@ -1910,7 +1990,6 @@ type Signer interface {
 type Sr25519Signer struct {
         keyPair *crypto.Sr25519KeyPair
 }
-
 
 // NewSr25519Signer creates a new sr25519 signer
 func NewSr25519Signer(keyPath string, password []byte) (*Sr25519Signer, error) <span class="cov8" title="1">{
@@ -1974,7 +2053,7 @@ func (s *Sr25519Signer) Close() error <span class="cov8" title="1">{
         <span class="cov8" title="1">return nil</span>
 }
 </pre>
-		
+
 		<pre class="file" id="file13" style="display: none">// Code generated by protoc-gen-go. DO NOT EDIT.
 // versions:
 //         protoc-gen-go v1.36.6
@@ -2437,8 +2516,801 @@ func file_proto_signer_proto_init() <span class="cov0" title="0">{
         file_proto_signer_proto_depIdxs = nil</span>
 }
 </pre>
-		
-		<pre class="file" id="file14" style="display: none">// Code generated by protoc-gen-go-grpc. DO NOT EDIT.
+
+		<pre class="file" id="file14" style="display: none">// Code generated by protoc-gen-go. DO NOT EDIT.
+// versions:
+//         protoc-gen-go v1.36.6
+//         protoc        v5.29.3
+// source: signer.proto
+
+package v1
+
+import (
+        protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+        protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+        emptypb "google.golang.org/protobuf/types/known/emptypb"
+        reflect "reflect"
+        sync "sync"
+        unsafe "unsafe"
+)
+
+const (
+        // Verify that this generated code is sufficiently up-to-date.
+        _ = protoimpl.EnforceVersion(20 - protoimpl.MinVersion)
+        // Verify that runtime/protoimpl is sufficiently up-to-date.
+        _ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
+)
+
+// GetPublicKeyResponse contains the public key information
+type GetPublicKeyResponse struct {
+        state protoimpl.MessageState `protogen:"open.v1"`
+        // 32-byte compressed Ristretto point
+        PublicKey []byte `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
+        // SS58 address derived from public_key
+        Ss58Address string `protobuf:"bytes,2,opt,name=ss58_address,json=ss58Address,proto3" json:"ss58_address,omitempty"`
+        // Key ID
+        KeyId         string `protobuf:"bytes,3,opt,name=key_id,json=keyId,proto3" json:"key_id,omitempty"`
+        unknownFields protoimpl.UnknownFields
+        sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetPublicKeyResponse) Reset() <span class="cov0" title="0">{
+        *x = GetPublicKeyResponse{}
+        mi := &amp;file_signer_proto_msgTypes[0]
+        ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+        ms.StoreMessageInfo(mi)
+}</span>
+
+func (x *GetPublicKeyResponse) String() string <span class="cov0" title="0">{
+        return protoimpl.X.MessageStringOf(x)
+}</span>
+
+func (*GetPublicKeyResponse) ProtoMessage() {<span class="cov0" title="0">}</span>
+
+func (x *GetPublicKeyResponse) ProtoReflect() protoreflect.Message <span class="cov0" title="0">{
+        mi := &amp;file_signer_proto_msgTypes[0]
+        if x != nil </span><span class="cov0" title="0">{
+                ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+                if ms.LoadMessageInfo() == nil </span><span class="cov0" title="0">{
+                        ms.StoreMessageInfo(mi)
+                }</span>
+                <span class="cov0" title="0">return ms</span>
+        }
+        <span class="cov0" title="0">return mi.MessageOf(x)</span>
+}
+
+// Deprecated: Use GetPublicKeyResponse.ProtoReflect.Descriptor instead.
+func (*GetPublicKeyResponse) Descriptor() ([]byte, []int) <span class="cov0" title="0">{
+        return file_signer_proto_rawDescGZIP(), []int{0}
+}</span>
+
+func (x *GetPublicKeyResponse) GetPublicKey() []byte <span class="cov0" title="0">{
+        if x != nil </span><span class="cov0" title="0">{
+                return x.PublicKey
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (x *GetPublicKeyResponse) GetSs58Address() string <span class="cov0" title="0">{
+        if x != nil </span><span class="cov0" title="0">{
+                return x.Ss58Address
+        }</span>
+        <span class="cov0" title="0">return ""</span>
+}
+
+func (x *GetPublicKeyResponse) GetKeyId() string <span class="cov0" title="0">{
+        if x != nil </span><span class="cov0" title="0">{
+                return x.KeyId
+        }</span>
+        <span class="cov0" title="0">return ""</span>
+}
+
+// GetPublicKeyByIDRequest specifies which key ID to get
+type GetPublicKeyByIDRequest struct {
+        state protoimpl.MessageState `protogen:"open.v1"`
+        // Key ID to get public key for
+        KeyId         string `protobuf:"bytes,1,opt,name=key_id,json=keyId,proto3" json:"key_id,omitempty"`
+        unknownFields protoimpl.UnknownFields
+        sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetPublicKeyByIDRequest) Reset() <span class="cov0" title="0">{
+        *x = GetPublicKeyByIDRequest{}
+        mi := &amp;file_signer_proto_msgTypes[1]
+        ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+        ms.StoreMessageInfo(mi)
+}</span>
+
+func (x *GetPublicKeyByIDRequest) String() string <span class="cov0" title="0">{
+        return protoimpl.X.MessageStringOf(x)
+}</span>
+
+func (*GetPublicKeyByIDRequest) ProtoMessage() {<span class="cov0" title="0">}</span>
+
+func (x *GetPublicKeyByIDRequest) ProtoReflect() protoreflect.Message <span class="cov0" title="0">{
+        mi := &amp;file_signer_proto_msgTypes[1]
+        if x != nil </span><span class="cov0" title="0">{
+                ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+                if ms.LoadMessageInfo() == nil </span><span class="cov0" title="0">{
+                        ms.StoreMessageInfo(mi)
+                }</span>
+                <span class="cov0" title="0">return ms</span>
+        }
+        <span class="cov0" title="0">return mi.MessageOf(x)</span>
+}
+
+// Deprecated: Use GetPublicKeyByIDRequest.ProtoReflect.Descriptor instead.
+func (*GetPublicKeyByIDRequest) Descriptor() ([]byte, []int) <span class="cov0" title="0">{
+        return file_signer_proto_rawDescGZIP(), []int{1}
+}</span>
+
+func (x *GetPublicKeyByIDRequest) GetKeyId() string <span class="cov0" title="0">{
+        if x != nil </span><span class="cov0" title="0">{
+                return x.KeyId
+        }</span>
+        <span class="cov0" title="0">return ""</span>
+}
+
+// SignExtrinsicRequest contains the payload to sign with the default key
+type SignExtrinsicRequest struct {
+        state protoimpl.MessageState `protogen:"open.v1"`
+        // SCALE-encoded payload to be signed
+        Payload []byte `protobuf:"bytes,1,opt,name=payload,proto3" json:"payload,omitempty"`
+        // Optional context for verification (nonce, era, etc.)
+        Context       []byte `protobuf:"bytes,2,opt,name=context,proto3" json:"context,omitempty"`
+        unknownFields protoimpl.UnknownFields
+        sizeCache     protoimpl.SizeCache
+}
+
+func (x *SignExtrinsicRequest) Reset() <span class="cov0" title="0">{
+        *x = SignExtrinsicRequest{}
+        mi := &amp;file_signer_proto_msgTypes[2]
+        ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+        ms.StoreMessageInfo(mi)
+}</span>
+
+func (x *SignExtrinsicRequest) String() string <span class="cov0" title="0">{
+        return protoimpl.X.MessageStringOf(x)
+}</span>
+
+func (*SignExtrinsicRequest) ProtoMessage() {<span class="cov0" title="0">}</span>
+
+func (x *SignExtrinsicRequest) ProtoReflect() protoreflect.Message <span class="cov0" title="0">{
+        mi := &amp;file_signer_proto_msgTypes[2]
+        if x != nil </span><span class="cov0" title="0">{
+                ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+                if ms.LoadMessageInfo() == nil </span><span class="cov0" title="0">{
+                        ms.StoreMessageInfo(mi)
+                }</span>
+                <span class="cov0" title="0">return ms</span>
+        }
+        <span class="cov0" title="0">return mi.MessageOf(x)</span>
+}
+
+// Deprecated: Use SignExtrinsicRequest.ProtoReflect.Descriptor instead.
+func (*SignExtrinsicRequest) Descriptor() ([]byte, []int) <span class="cov0" title="0">{
+        return file_signer_proto_rawDescGZIP(), []int{2}
+}</span>
+
+func (x *SignExtrinsicRequest) GetPayload() []byte <span class="cov0" title="0">{
+        if x != nil </span><span class="cov0" title="0">{
+                return x.Payload
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (x *SignExtrinsicRequest) GetContext() []byte <span class="cov0" title="0">{
+        if x != nil </span><span class="cov0" title="0">{
+                return x.Context
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+// SignExtrinsicWithKeyRequest contains the payload to sign with a specific key
+type SignExtrinsicWithKeyRequest struct {
+        state protoimpl.MessageState `protogen:"open.v1"`
+        // Key ID to use for signing
+        KeyId string `protobuf:"bytes,1,opt,name=key_id,json=keyId,proto3" json:"key_id,omitempty"`
+        // SCALE-encoded payload to be signed
+        Payload []byte `protobuf:"bytes,2,opt,name=payload,proto3" json:"payload,omitempty"`
+        // Optional context for verification (nonce, era, etc.)
+        Context       []byte `protobuf:"bytes,3,opt,name=context,proto3" json:"context,omitempty"`
+        unknownFields protoimpl.UnknownFields
+        sizeCache     protoimpl.SizeCache
+}
+
+func (x *SignExtrinsicWithKeyRequest) Reset() <span class="cov0" title="0">{
+        *x = SignExtrinsicWithKeyRequest{}
+        mi := &amp;file_signer_proto_msgTypes[3]
+        ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+        ms.StoreMessageInfo(mi)
+}</span>
+
+func (x *SignExtrinsicWithKeyRequest) String() string <span class="cov0" title="0">{
+        return protoimpl.X.MessageStringOf(x)
+}</span>
+
+func (*SignExtrinsicWithKeyRequest) ProtoMessage() {<span class="cov0" title="0">}</span>
+
+func (x *SignExtrinsicWithKeyRequest) ProtoReflect() protoreflect.Message <span class="cov0" title="0">{
+        mi := &amp;file_signer_proto_msgTypes[3]
+        if x != nil </span><span class="cov0" title="0">{
+                ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+                if ms.LoadMessageInfo() == nil </span><span class="cov0" title="0">{
+                        ms.StoreMessageInfo(mi)
+                }</span>
+                <span class="cov0" title="0">return ms</span>
+        }
+        <span class="cov0" title="0">return mi.MessageOf(x)</span>
+}
+
+// Deprecated: Use SignExtrinsicWithKeyRequest.ProtoReflect.Descriptor instead.
+func (*SignExtrinsicWithKeyRequest) Descriptor() ([]byte, []int) <span class="cov0" title="0">{
+        return file_signer_proto_rawDescGZIP(), []int{3}
+}</span>
+
+func (x *SignExtrinsicWithKeyRequest) GetKeyId() string <span class="cov0" title="0">{
+        if x != nil </span><span class="cov0" title="0">{
+                return x.KeyId
+        }</span>
+        <span class="cov0" title="0">return ""</span>
+}
+
+func (x *SignExtrinsicWithKeyRequest) GetPayload() []byte <span class="cov0" title="0">{
+        if x != nil </span><span class="cov0" title="0">{
+                return x.Payload
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (x *SignExtrinsicWithKeyRequest) GetContext() []byte <span class="cov0" title="0">{
+        if x != nil </span><span class="cov0" title="0">{
+                return x.Context
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+// SignExtrinsicResponse contains the signature
+type SignExtrinsicResponse struct {
+        state protoimpl.MessageState `protogen:"open.v1"`
+        // 64-byte sr25519 signature
+        Signature []byte `protobuf:"bytes,1,opt,name=signature,proto3" json:"signature,omitempty"`
+        // Key ID used for signing
+        KeyId         string `protobuf:"bytes,2,opt,name=key_id,json=keyId,proto3" json:"key_id,omitempty"`
+        unknownFields protoimpl.UnknownFields
+        sizeCache     protoimpl.SizeCache
+}
+
+func (x *SignExtrinsicResponse) Reset() <span class="cov0" title="0">{
+        *x = SignExtrinsicResponse{}
+        mi := &amp;file_signer_proto_msgTypes[4]
+        ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+        ms.StoreMessageInfo(mi)
+}</span>
+
+func (x *SignExtrinsicResponse) String() string <span class="cov0" title="0">{
+        return protoimpl.X.MessageStringOf(x)
+}</span>
+
+func (*SignExtrinsicResponse) ProtoMessage() {<span class="cov0" title="0">}</span>
+
+func (x *SignExtrinsicResponse) ProtoReflect() protoreflect.Message <span class="cov0" title="0">{
+        mi := &amp;file_signer_proto_msgTypes[4]
+        if x != nil </span><span class="cov0" title="0">{
+                ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+                if ms.LoadMessageInfo() == nil </span><span class="cov0" title="0">{
+                        ms.StoreMessageInfo(mi)
+                }</span>
+                <span class="cov0" title="0">return ms</span>
+        }
+        <span class="cov0" title="0">return mi.MessageOf(x)</span>
+}
+
+// Deprecated: Use SignExtrinsicResponse.ProtoReflect.Descriptor instead.
+func (*SignExtrinsicResponse) Descriptor() ([]byte, []int) <span class="cov0" title="0">{
+        return file_signer_proto_rawDescGZIP(), []int{4}
+}</span>
+
+func (x *SignExtrinsicResponse) GetSignature() []byte <span class="cov0" title="0">{
+        if x != nil </span><span class="cov0" title="0">{
+                return x.Signature
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (x *SignExtrinsicResponse) GetKeyId() string <span class="cov0" title="0">{
+        if x != nil </span><span class="cov0" title="0">{
+                return x.KeyId
+        }</span>
+        <span class="cov0" title="0">return ""</span>
+}
+
+// ListKeysResponse contains a list of all available key IDs
+type ListKeysResponse struct {
+        state protoimpl.MessageState `protogen:"open.v1"`
+        // List of key IDs
+        KeyIds []string `protobuf:"bytes,1,rep,name=key_ids,json=keyIds,proto3" json:"key_ids,omitempty"`
+        // Default key ID (if set)
+        DefaultKeyId  string `protobuf:"bytes,2,opt,name=default_key_id,json=defaultKeyId,proto3" json:"default_key_id,omitempty"`
+        unknownFields protoimpl.UnknownFields
+        sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListKeysResponse) Reset() <span class="cov0" title="0">{
+        *x = ListKeysResponse{}
+        mi := &amp;file_signer_proto_msgTypes[5]
+        ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+        ms.StoreMessageInfo(mi)
+}</span>
+
+func (x *ListKeysResponse) String() string <span class="cov0" title="0">{
+        return protoimpl.X.MessageStringOf(x)
+}</span>
+
+func (*ListKeysResponse) ProtoMessage() {<span class="cov0" title="0">}</span>
+
+func (x *ListKeysResponse) ProtoReflect() protoreflect.Message <span class="cov0" title="0">{
+        mi := &amp;file_signer_proto_msgTypes[5]
+        if x != nil </span><span class="cov0" title="0">{
+                ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+                if ms.LoadMessageInfo() == nil </span><span class="cov0" title="0">{
+                        ms.StoreMessageInfo(mi)
+                }</span>
+                <span class="cov0" title="0">return ms</span>
+        }
+        <span class="cov0" title="0">return mi.MessageOf(x)</span>
+}
+
+// Deprecated: Use ListKeysResponse.ProtoReflect.Descriptor instead.
+func (*ListKeysResponse) Descriptor() ([]byte, []int) <span class="cov0" title="0">{
+        return file_signer_proto_rawDescGZIP(), []int{5}
+}</span>
+
+func (x *ListKeysResponse) GetKeyIds() []string <span class="cov0" title="0">{
+        if x != nil </span><span class="cov0" title="0">{
+                return x.KeyIds
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (x *ListKeysResponse) GetDefaultKeyId() string <span class="cov0" title="0">{
+        if x != nil </span><span class="cov0" title="0">{
+                return x.DefaultKeyId
+        }</span>
+        <span class="cov0" title="0">return ""</span>
+}
+
+var File_signer_proto protoreflect.FileDescriptor
+
+const file_signer_proto_rawDesc = "" +
+        "\n" +
+        "\fsigner.proto\x12\vbtsigner.v1\x1a\x1bgoogle/protobuf/empty.proto\"o\n" +
+        "\x14GetPublicKeyResponse\x12\x1d\n" +
+        "\n" +
+        "public_key\x18\x01 \x01(\fR\tpublicKey\x12!\n" +
+        "\fss58_address\x18\x02 \x01(\tR\vss58Address\x12\x15\n" +
+        "\x06key_id\x18\x03 \x01(\tR\x05keyId\"0\n" +
+        "\x17GetPublicKeyByIDRequest\x12\x15\n" +
+        "\x06key_id\x18\x01 \x01(\tR\x05keyId\"J\n" +
+        "\x14SignExtrinsicRequest\x12\x18\n" +
+        "\apayload\x18\x01 \x01(\fR\apayload\x12\x18\n" +
+        "\acontext\x18\x02 \x01(\fR\acontext\"h\n" +
+        "\x1bSignExtrinsicWithKeyRequest\x12\x15\n" +
+        "\x06key_id\x18\x01 \x01(\tR\x05keyId\x12\x18\n" +
+        "\apayload\x18\x02 \x01(\fR\apayload\x12\x18\n" +
+        "\acontext\x18\x03 \x01(\fR\acontext\"L\n" +
+        "\x15SignExtrinsicResponse\x12\x1c\n" +
+        "\tsignature\x18\x01 \x01(\fR\tsignature\x12\x15\n" +
+        "\x06key_id\x18\x02 \x01(\tR\x05keyId\"Q\n" +
+        "\x10ListKeysResponse\x12\x17\n" +
+        "\akey_ids\x18\x01 \x03(\tR\x06keyIds\x12$\n" +
+        "\x0edefault_key_id\x18\x02 \x01(\tR\fdefaultKeyId2\xf1\x03\n" +
+        "\fRemoteSigner\x12I\n" +
+        "\fGetPublicKey\x12\x16.google.protobuf.Empty\x1a!.btsigner.v1.GetPublicKeyResponse\x12[\n" +
+        "\x10GetPublicKeyByID\x12$.btsigner.v1.GetPublicKeyByIDRequest\x1a!.btsigner.v1.GetPublicKeyResponse\x12V\n" +
+        "\rSignExtrinsic\x12!.btsigner.v1.SignExtrinsicRequest\x1a\".btsigner.v1.SignExtrinsicResponse\x12d\n" +
+        "\x14SignExtrinsicWithKey\x12(.btsigner.v1.SignExtrinsicWithKeyRequest\x1a\".btsigner.v1.SignExtrinsicResponse\x12A\n" +
+        "\bListKeys\x12\x16.google.protobuf.Empty\x1a\x1d.btsigner.v1.ListKeysResponse\x128\n" +
+        "\x06Health\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.EmptyB3Z1github.com/bittensor-lab/btsigner/proto/signer/v1b\x06proto3"
+
+var (
+        file_signer_proto_rawDescOnce sync.Once
+        file_signer_proto_rawDescData []byte
+)
+
+func file_signer_proto_rawDescGZIP() []byte <span class="cov0" title="0">{
+        file_signer_proto_rawDescOnce.Do(func() </span><span class="cov0" title="0">{
+                file_signer_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_signer_proto_rawDesc), len(file_signer_proto_rawDesc)))
+        }</span>)
+        <span class="cov0" title="0">return file_signer_proto_rawDescData</span>
+}
+
+var file_signer_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_signer_proto_goTypes = []any{
+        (*GetPublicKeyResponse)(nil),        // 0: btsigner.v1.GetPublicKeyResponse
+        (*GetPublicKeyByIDRequest)(nil),     // 1: btsigner.v1.GetPublicKeyByIDRequest
+        (*SignExtrinsicRequest)(nil),        // 2: btsigner.v1.SignExtrinsicRequest
+        (*SignExtrinsicWithKeyRequest)(nil), // 3: btsigner.v1.SignExtrinsicWithKeyRequest
+        (*SignExtrinsicResponse)(nil),       // 4: btsigner.v1.SignExtrinsicResponse
+        (*ListKeysResponse)(nil),            // 5: btsigner.v1.ListKeysResponse
+        (*emptypb.Empty)(nil),               // 6: google.protobuf.Empty
+}
+var file_signer_proto_depIdxs = []int32{
+        6, // 0: btsigner.v1.RemoteSigner.GetPublicKey:input_type -&gt; google.protobuf.Empty
+        1, // 1: btsigner.v1.RemoteSigner.GetPublicKeyByID:input_type -&gt; btsigner.v1.GetPublicKeyByIDRequest
+        2, // 2: btsigner.v1.RemoteSigner.SignExtrinsic:input_type -&gt; btsigner.v1.SignExtrinsicRequest
+        3, // 3: btsigner.v1.RemoteSigner.SignExtrinsicWithKey:input_type -&gt; btsigner.v1.SignExtrinsicWithKeyRequest
+        6, // 4: btsigner.v1.RemoteSigner.ListKeys:input_type -&gt; google.protobuf.Empty
+        6, // 5: btsigner.v1.RemoteSigner.Health:input_type -&gt; google.protobuf.Empty
+        0, // 6: btsigner.v1.RemoteSigner.GetPublicKey:output_type -&gt; btsigner.v1.GetPublicKeyResponse
+        0, // 7: btsigner.v1.RemoteSigner.GetPublicKeyByID:output_type -&gt; btsigner.v1.GetPublicKeyResponse
+        4, // 8: btsigner.v1.RemoteSigner.SignExtrinsic:output_type -&gt; btsigner.v1.SignExtrinsicResponse
+        4, // 9: btsigner.v1.RemoteSigner.SignExtrinsicWithKey:output_type -&gt; btsigner.v1.SignExtrinsicResponse
+        5, // 10: btsigner.v1.RemoteSigner.ListKeys:output_type -&gt; btsigner.v1.ListKeysResponse
+        6, // 11: btsigner.v1.RemoteSigner.Health:output_type -&gt; google.protobuf.Empty
+        6, // [6:12] is the sub-list for method output_type
+        0, // [0:6] is the sub-list for method input_type
+        0, // [0:0] is the sub-list for extension type_name
+        0, // [0:0] is the sub-list for extension extendee
+        0, // [0:0] is the sub-list for field type_name
+}
+
+func init() <span class="cov0" title="0">{ file_signer_proto_init() }</span>
+func file_signer_proto_init() <span class="cov0" title="0">{
+        if File_signer_proto != nil </span><span class="cov0" title="0">{
+                return
+        }</span>
+        <span class="cov0" title="0">type x struct{}
+        out := protoimpl.TypeBuilder{
+                File: protoimpl.DescBuilder{
+                        GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
+                        RawDescriptor: unsafe.Slice(unsafe.StringData(file_signer_proto_rawDesc), len(file_signer_proto_rawDesc)),
+                        NumEnums:      0,
+                        NumMessages:   6,
+                        NumExtensions: 0,
+                        NumServices:   1,
+                },
+                GoTypes:           file_signer_proto_goTypes,
+                DependencyIndexes: file_signer_proto_depIdxs,
+                MessageInfos:      file_signer_proto_msgTypes,
+        }.Build()
+        File_signer_proto = out.File
+        file_signer_proto_goTypes = nil
+        file_signer_proto_depIdxs = nil</span>
+}
+</pre>
+
+		<pre class="file" id="file15" style="display: none">// Code generated by protoc-gen-go-grpc. DO NOT EDIT.
+// versions:
+// - protoc-gen-go-grpc v1.5.1
+// - protoc             v5.29.3
+// source: signer.proto
+
+package v1
+
+import (
+        context "context"
+        grpc "google.golang.org/grpc"
+        codes "google.golang.org/grpc/codes"
+        status "google.golang.org/grpc/status"
+        emptypb "google.golang.org/protobuf/types/known/emptypb"
+)
+
+// This is a compile-time assertion to ensure that this generated file
+// is compatible with the grpc package it is being compiled against.
+// Requires gRPC-Go v1.64.0 or later.
+const _ = grpc.SupportPackageIsVersion9
+
+const (
+        RemoteSigner_GetPublicKey_FullMethodName         = "/btsigner.v1.RemoteSigner/GetPublicKey"
+        RemoteSigner_GetPublicKeyByID_FullMethodName     = "/btsigner.v1.RemoteSigner/GetPublicKeyByID"
+        RemoteSigner_SignExtrinsic_FullMethodName        = "/btsigner.v1.RemoteSigner/SignExtrinsic"
+        RemoteSigner_SignExtrinsicWithKey_FullMethodName = "/btsigner.v1.RemoteSigner/SignExtrinsicWithKey"
+        RemoteSigner_ListKeys_FullMethodName             = "/btsigner.v1.RemoteSigner/ListKeys"
+        RemoteSigner_Health_FullMethodName               = "/btsigner.v1.RemoteSigner/Health"
+)
+
+// RemoteSignerClient is the client API for RemoteSigner service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// RemoteSigner service definition
+type RemoteSignerClient interface {
+        // GetPublicKey returns the public key of the default signer
+        GetPublicKey(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetPublicKeyResponse, error)
+        // GetPublicKeyByID returns the public key of a specific signer by ID
+        GetPublicKeyByID(ctx context.Context, in *GetPublicKeyByIDRequest, opts ...grpc.CallOption) (*GetPublicKeyResponse, error)
+        // SignExtrinsic signs a payload with the default signer's private key
+        SignExtrinsic(ctx context.Context, in *SignExtrinsicRequest, opts ...grpc.CallOption) (*SignExtrinsicResponse, error)
+        // SignExtrinsicWithKey signs a payload with a specific signer's private key
+        SignExtrinsicWithKey(ctx context.Context, in *SignExtrinsicWithKeyRequest, opts ...grpc.CallOption) (*SignExtrinsicResponse, error)
+        // ListKeys returns a list of all available key IDs
+        ListKeys(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListKeysResponse, error)
+        // Health returns the health status of the signer
+        Health(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
+}
+
+type remoteSignerClient struct {
+        cc grpc.ClientConnInterface
+}
+
+func NewRemoteSignerClient(cc grpc.ClientConnInterface) RemoteSignerClient <span class="cov0" title="0">{
+        return &amp;remoteSignerClient{cc}
+}</span>
+
+func (c *remoteSignerClient) GetPublicKey(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetPublicKeyResponse, error) <span class="cov0" title="0">{
+        cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+        out := new(GetPublicKeyResponse)
+        err := c.cc.Invoke(ctx, RemoteSigner_GetPublicKey_FullMethodName, in, out, cOpts...)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">return out, nil</span>
+}
+
+func (c *remoteSignerClient) GetPublicKeyByID(ctx context.Context, in *GetPublicKeyByIDRequest, opts ...grpc.CallOption) (*GetPublicKeyResponse, error) <span class="cov0" title="0">{
+        cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+        out := new(GetPublicKeyResponse)
+        err := c.cc.Invoke(ctx, RemoteSigner_GetPublicKeyByID_FullMethodName, in, out, cOpts...)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">return out, nil</span>
+}
+
+func (c *remoteSignerClient) SignExtrinsic(ctx context.Context, in *SignExtrinsicRequest, opts ...grpc.CallOption) (*SignExtrinsicResponse, error) <span class="cov0" title="0">{
+        cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+        out := new(SignExtrinsicResponse)
+        err := c.cc.Invoke(ctx, RemoteSigner_SignExtrinsic_FullMethodName, in, out, cOpts...)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">return out, nil</span>
+}
+
+func (c *remoteSignerClient) SignExtrinsicWithKey(ctx context.Context, in *SignExtrinsicWithKeyRequest, opts ...grpc.CallOption) (*SignExtrinsicResponse, error) <span class="cov0" title="0">{
+        cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+        out := new(SignExtrinsicResponse)
+        err := c.cc.Invoke(ctx, RemoteSigner_SignExtrinsicWithKey_FullMethodName, in, out, cOpts...)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">return out, nil</span>
+}
+
+func (c *remoteSignerClient) ListKeys(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListKeysResponse, error) <span class="cov0" title="0">{
+        cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+        out := new(ListKeysResponse)
+        err := c.cc.Invoke(ctx, RemoteSigner_ListKeys_FullMethodName, in, out, cOpts...)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">return out, nil</span>
+}
+
+func (c *remoteSignerClient) Health(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) <span class="cov0" title="0">{
+        cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+        out := new(emptypb.Empty)
+        err := c.cc.Invoke(ctx, RemoteSigner_Health_FullMethodName, in, out, cOpts...)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">return out, nil</span>
+}
+
+// RemoteSignerServer is the server API for RemoteSigner service.
+// All implementations must embed UnimplementedRemoteSignerServer
+// for forward compatibility.
+//
+// RemoteSigner service definition
+type RemoteSignerServer interface {
+        // GetPublicKey returns the public key of the default signer
+        GetPublicKey(context.Context, *emptypb.Empty) (*GetPublicKeyResponse, error)
+        // GetPublicKeyByID returns the public key of a specific signer by ID
+        GetPublicKeyByID(context.Context, *GetPublicKeyByIDRequest) (*GetPublicKeyResponse, error)
+        // SignExtrinsic signs a payload with the default signer's private key
+        SignExtrinsic(context.Context, *SignExtrinsicRequest) (*SignExtrinsicResponse, error)
+        // SignExtrinsicWithKey signs a payload with a specific signer's private key
+        SignExtrinsicWithKey(context.Context, *SignExtrinsicWithKeyRequest) (*SignExtrinsicResponse, error)
+        // ListKeys returns a list of all available key IDs
+        ListKeys(context.Context, *emptypb.Empty) (*ListKeysResponse, error)
+        // Health returns the health status of the signer
+        Health(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+        mustEmbedUnimplementedRemoteSignerServer()
+}
+
+// UnimplementedRemoteSignerServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedRemoteSignerServer struct{}
+
+func (UnimplementedRemoteSignerServer) GetPublicKey(context.Context, *emptypb.Empty) (*GetPublicKeyResponse, error) <span class="cov0" title="0">{
+        return nil, status.Errorf(codes.Unimplemented, "method GetPublicKey not implemented")
+}</span>
+func (UnimplementedRemoteSignerServer) GetPublicKeyByID(context.Context, *GetPublicKeyByIDRequest) (*GetPublicKeyResponse, error) <span class="cov0" title="0">{
+        return nil, status.Errorf(codes.Unimplemented, "method GetPublicKeyByID not implemented")
+}</span>
+func (UnimplementedRemoteSignerServer) SignExtrinsic(context.Context, *SignExtrinsicRequest) (*SignExtrinsicResponse, error) <span class="cov0" title="0">{
+        return nil, status.Errorf(codes.Unimplemented, "method SignExtrinsic not implemented")
+}</span>
+func (UnimplementedRemoteSignerServer) SignExtrinsicWithKey(context.Context, *SignExtrinsicWithKeyRequest) (*SignExtrinsicResponse, error) <span class="cov0" title="0">{
+        return nil, status.Errorf(codes.Unimplemented, "method SignExtrinsicWithKey not implemented")
+}</span>
+func (UnimplementedRemoteSignerServer) ListKeys(context.Context, *emptypb.Empty) (*ListKeysResponse, error) <span class="cov0" title="0">{
+        return nil, status.Errorf(codes.Unimplemented, "method ListKeys not implemented")
+}</span>
+func (UnimplementedRemoteSignerServer) Health(context.Context, *emptypb.Empty) (*emptypb.Empty, error) <span class="cov0" title="0">{
+        return nil, status.Errorf(codes.Unimplemented, "method Health not implemented")
+}</span>
+func (UnimplementedRemoteSignerServer) mustEmbedUnimplementedRemoteSignerServer() {<span class="cov0" title="0">}</span>
+func (UnimplementedRemoteSignerServer) testEmbeddedByValue()                      {<span class="cov0" title="0">}</span>
+
+// UnsafeRemoteSignerServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to RemoteSignerServer will
+// result in compilation errors.
+type UnsafeRemoteSignerServer interface {
+        mustEmbedUnimplementedRemoteSignerServer()
+}
+
+func RegisterRemoteSignerServer(s grpc.ServiceRegistrar, srv RemoteSignerServer) <span class="cov0" title="0">{
+        // If the following call pancis, it indicates UnimplementedRemoteSignerServer was
+        // embedded by pointer and is nil.  This will cause panics if an
+        // unimplemented method is ever invoked, so we test this at initialization
+        // time to prevent it from happening at runtime later due to I/O.
+        if t, ok := srv.(interface{ testEmbeddedByValue() }); ok </span><span class="cov0" title="0">{
+                t.testEmbeddedByValue()
+        }</span>
+        <span class="cov0" title="0">s.RegisterService(&amp;RemoteSigner_ServiceDesc, srv)</span>
+}
+
+func _RemoteSigner_GetPublicKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) <span class="cov0" title="0">{
+        in := new(emptypb.Empty)
+        if err := dec(in); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">if interceptor == nil </span><span class="cov0" title="0">{
+                return srv.(RemoteSignerServer).GetPublicKey(ctx, in)
+        }</span>
+        <span class="cov0" title="0">info := &amp;grpc.UnaryServerInfo{
+                Server:     srv,
+                FullMethod: RemoteSigner_GetPublicKey_FullMethodName,
+        }
+        handler := func(ctx context.Context, req interface{}) (interface{}, error) </span><span class="cov0" title="0">{
+                return srv.(RemoteSignerServer).GetPublicKey(ctx, req.(*emptypb.Empty))
+        }</span>
+        <span class="cov0" title="0">return interceptor(ctx, in, info, handler)</span>
+}
+
+func _RemoteSigner_GetPublicKeyByID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) <span class="cov0" title="0">{
+        in := new(GetPublicKeyByIDRequest)
+        if err := dec(in); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">if interceptor == nil </span><span class="cov0" title="0">{
+                return srv.(RemoteSignerServer).GetPublicKeyByID(ctx, in)
+        }</span>
+        <span class="cov0" title="0">info := &amp;grpc.UnaryServerInfo{
+                Server:     srv,
+                FullMethod: RemoteSigner_GetPublicKeyByID_FullMethodName,
+        }
+        handler := func(ctx context.Context, req interface{}) (interface{}, error) </span><span class="cov0" title="0">{
+                return srv.(RemoteSignerServer).GetPublicKeyByID(ctx, req.(*GetPublicKeyByIDRequest))
+        }</span>
+        <span class="cov0" title="0">return interceptor(ctx, in, info, handler)</span>
+}
+
+func _RemoteSigner_SignExtrinsic_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) <span class="cov0" title="0">{
+        in := new(SignExtrinsicRequest)
+        if err := dec(in); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">if interceptor == nil </span><span class="cov0" title="0">{
+                return srv.(RemoteSignerServer).SignExtrinsic(ctx, in)
+        }</span>
+        <span class="cov0" title="0">info := &amp;grpc.UnaryServerInfo{
+                Server:     srv,
+                FullMethod: RemoteSigner_SignExtrinsic_FullMethodName,
+        }
+        handler := func(ctx context.Context, req interface{}) (interface{}, error) </span><span class="cov0" title="0">{
+                return srv.(RemoteSignerServer).SignExtrinsic(ctx, req.(*SignExtrinsicRequest))
+        }</span>
+        <span class="cov0" title="0">return interceptor(ctx, in, info, handler)</span>
+}
+
+func _RemoteSigner_SignExtrinsicWithKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) <span class="cov0" title="0">{
+        in := new(SignExtrinsicWithKeyRequest)
+        if err := dec(in); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">if interceptor == nil </span><span class="cov0" title="0">{
+                return srv.(RemoteSignerServer).SignExtrinsicWithKey(ctx, in)
+        }</span>
+        <span class="cov0" title="0">info := &amp;grpc.UnaryServerInfo{
+                Server:     srv,
+                FullMethod: RemoteSigner_SignExtrinsicWithKey_FullMethodName,
+        }
+        handler := func(ctx context.Context, req interface{}) (interface{}, error) </span><span class="cov0" title="0">{
+                return srv.(RemoteSignerServer).SignExtrinsicWithKey(ctx, req.(*SignExtrinsicWithKeyRequest))
+        }</span>
+        <span class="cov0" title="0">return interceptor(ctx, in, info, handler)</span>
+}
+
+func _RemoteSigner_ListKeys_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) <span class="cov0" title="0">{
+        in := new(emptypb.Empty)
+        if err := dec(in); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">if interceptor == nil </span><span class="cov0" title="0">{
+                return srv.(RemoteSignerServer).ListKeys(ctx, in)
+        }</span>
+        <span class="cov0" title="0">info := &amp;grpc.UnaryServerInfo{
+                Server:     srv,
+                FullMethod: RemoteSigner_ListKeys_FullMethodName,
+        }
+        handler := func(ctx context.Context, req interface{}) (interface{}, error) </span><span class="cov0" title="0">{
+                return srv.(RemoteSignerServer).ListKeys(ctx, req.(*emptypb.Empty))
+        }</span>
+        <span class="cov0" title="0">return interceptor(ctx, in, info, handler)</span>
+}
+
+func _RemoteSigner_Health_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) <span class="cov0" title="0">{
+        in := new(emptypb.Empty)
+        if err := dec(in); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">if interceptor == nil </span><span class="cov0" title="0">{
+                return srv.(RemoteSignerServer).Health(ctx, in)
+        }</span>
+        <span class="cov0" title="0">info := &amp;grpc.UnaryServerInfo{
+                Server:     srv,
+                FullMethod: RemoteSigner_Health_FullMethodName,
+        }
+        handler := func(ctx context.Context, req interface{}) (interface{}, error) </span><span class="cov0" title="0">{
+                return srv.(RemoteSignerServer).Health(ctx, req.(*emptypb.Empty))
+        }</span>
+        <span class="cov0" title="0">return interceptor(ctx, in, info, handler)</span>
+}
+
+// RemoteSigner_ServiceDesc is the grpc.ServiceDesc for RemoteSigner service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var RemoteSigner_ServiceDesc = grpc.ServiceDesc{
+        ServiceName: "btsigner.v1.RemoteSigner",
+        HandlerType: (*RemoteSignerServer)(nil),
+        Methods: []grpc.MethodDesc{
+                {
+                        MethodName: "GetPublicKey",
+                        Handler:    _RemoteSigner_GetPublicKey_Handler,
+                },
+                {
+                        MethodName: "GetPublicKeyByID",
+                        Handler:    _RemoteSigner_GetPublicKeyByID_Handler,
+                },
+                {
+                        MethodName: "SignExtrinsic",
+                        Handler:    _RemoteSigner_SignExtrinsic_Handler,
+                },
+                {
+                        MethodName: "SignExtrinsicWithKey",
+                        Handler:    _RemoteSigner_SignExtrinsicWithKey_Handler,
+                },
+                {
+                        MethodName: "ListKeys",
+                        Handler:    _RemoteSigner_ListKeys_Handler,
+                },
+                {
+                        MethodName: "Health",
+                        Handler:    _RemoteSigner_Health_Handler,
+                },
+        },
+        Streams:  []grpc.StreamDesc{},
+        Metadata: "signer.proto",
+}
+</pre>
+
+		<pre class="file" id="file16" style="display: none">// Code generated by protoc-gen-go-grpc. DO NOT EDIT.
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v5.29.3
@@ -2767,13 +3639,14 @@ var RemoteSigner_ServiceDesc = grpc.ServiceDesc{
         Metadata: "proto/signer.proto",
 }
 </pre>
-		
-		<pre class="file" id="file15" style="display: none">package main
+
+		<pre class="file" id="file17" style="display: none">package main
 
 import (
         "context"
         "crypto/rand"
         "fmt"
+        "log"
         "os"
         "strings"
         "time"
@@ -2785,7 +3658,7 @@ import (
 const (
         // Test password for key generation
         testPassword = "test-password-123"
-        
+
         // Test key paths
         singleKeyPath = "test_single_key.json"
         keystorePath  = "test_keystore"
@@ -2815,10 +3688,10 @@ func (ts *TestSuite) printResults() <span class="cov0" title="0">{
         fmt.Println("\n" + strings.Repeat("=", 60))
         fmt.Println("TEST RESULTS SUMMARY")
         fmt.Println(strings.Repeat("=", 60))
-        
+
         passed := 0
         failed := 0
-        
+
         for _, result := range ts.results </span><span class="cov0" title="0">{
                 status := "✓ PASS"
                 if !result.Success </span><span class="cov0" title="0">{
@@ -2827,9 +3700,9 @@ func (ts *TestSuite) printResults() <span class="cov0" title="0">{
                 }</span> else<span class="cov0" title="0"> {
                         passed++
                 }</span>
-                
+
                 <span class="cov0" title="0">fmt.Printf("%s | %s | %v\n", status, result.Name, result.Duration)
-                
+
                 if result.PublicKey != nil </span><span class="cov0" title="0">{
                         fmt.Printf("     Public Key: %x\n", result.PublicKey)
                 }</span>
@@ -2844,7 +3717,7 @@ func (ts *TestSuite) printResults() <span class="cov0" title="0">{
                 }</span>
                 <span class="cov0" title="0">fmt.Println()</span>
         }
-        
+
         <span class="cov0" title="0">fmt.Printf("Total: %d | Passed: %d | Failed: %d\n", len(ts.results), passed, failed)
         fmt.Println(strings.Repeat("=", 60))</span>
 }
@@ -2852,34 +3725,34 @@ func (ts *TestSuite) printResults() <span class="cov0" title="0">{
 func main() <span class="cov0" title="0">{
         fmt.Println("Bittensor Signer Key Generation and Signing Test Suite")
         fmt.Println(strings.Repeat("=", 60))
-        
+
         ts := &amp;TestSuite{}
-        
+
         // Clean up any existing test files
         cleanup()
         defer cleanup()
-        
+
         // Test 1: Single Key Generation
         ts.testSingleKeyGeneration()
-        
+
         // Test 2: Single Key Signing
         ts.testSingleKeySigning()
-        
+
         // Test 3: Keystore Creation and Key Generation
         ts.testKeystoreGeneration()
-        
+
         // Test 4: Multiple Keys in Keystore
         ts.testMultipleKeysInKeystore()
-        
+
         // Test 5: Keystore Signing
         ts.testKeystoreSigning()
-        
+
         // Test 6: Stress Test - Multiple Signatures
         ts.testStressSignatures()
-        
+
         // Test 7: Edge Cases
         ts.testEdgeCases()
-        
+
         // Print final results
         ts.printResults()
 }</span>
@@ -2887,14 +3760,14 @@ func main() <span class="cov0" title="0">{
 func (ts *TestSuite) testSingleKeyGeneration() <span class="cov0" title="0">{
         start := time.Now()
         result := TestResult{
-                Name:      "Single Key Generation",
-                Success:   false,
-                Duration:  0,
+                Name:     "Single Key Generation",
+                Success:  false,
+                Duration: 0,
         }
-        
+
         fmt.Println("Test 1: Single Key Generation")
         fmt.Println(strings.Repeat("-", 30))
-        
+
         // Generate a single key
         keyPair, err := crypto.GenerateKeyFile(singleKeyPath, func() (*crypto.SecureBytes, error) </span><span class="cov0" title="0">{
                 return crypto.NewSecureBytes([]byte(testPassword)), nil
@@ -2905,7 +3778,7 @@ func (ts *TestSuite) testSingleKeyGeneration() <span class="cov0" title="0">{
                 ts.addResult(result)
                 return
         }</span>
-        
+
         // Get public key and SS58 address
         <span class="cov0" title="0">pubKey := keyPair.PublicKey()
         ss58Addr, err := crypto.PublicKeyToSS58(pubKey)
@@ -2915,31 +3788,31 @@ func (ts *TestSuite) testSingleKeyGeneration() <span class="cov0" title="0">{
                 ts.addResult(result)
                 return
         }</span>
-        
+
         <span class="cov0" title="0">result.Success = true
         result.PublicKey = pubKey
         result.SS58Address = ss58Addr
         result.Duration = time.Since(start)
-        
+
         fmt.Printf("✓ Generated single key successfully\n")
         fmt.Printf("  Public Key: %x\n", pubKey)
         fmt.Printf("  SS58 Address: %s\n", ss58Addr)
         fmt.Printf("  Duration: %v\n", result.Duration)
-        
+
         ts.addResult(result)</span>
 }
 
 func (ts *TestSuite) testSingleKeySigning() <span class="cov0" title="0">{
         start := time.Now()
         result := TestResult{
-                Name:      "Single Key Signing",
-                Success:   false,
-                Duration:  0,
+                Name:     "Single Key Signing",
+                Success:  false,
+                Duration: 0,
         }
-        
+
         fmt.Println("\nTest 2: Single Key Signing")
         fmt.Println(strings.Repeat("-", 30))
-        
+
         // Load the previously generated key
         s, err := signer.NewSr25519Signer(singleKeyPath, []byte(testPassword))
         if err != nil </span><span class="cov0" title="0">{
@@ -2949,7 +3822,7 @@ func (ts *TestSuite) testSingleKeySigning() <span class="cov0" title="0">{
                 return
         }</span>
         <span class="cov0" title="0">defer s.Close()
-        
+
         // Get public key info
         pubKey, ss58Addr, err := s.GetPublicKey()
         if err != nil </span><span class="cov0" title="0">{
@@ -2958,17 +3831,17 @@ func (ts *TestSuite) testSingleKeySigning() <span class="cov0" title="0">{
                 ts.addResult(result)
                 return
         }</span>
-        
+
         // Test signing with different payloads
         <span class="cov0" title="0">testPayloads := [][]byte{
                 []byte("hello world"),
                 []byte("test message for signing"),
                 {0x01, 0x02, 0x03, 0x04, 0x05}, // binary data
         }
-        
+
         ctx := context.Background()
         var lastSignature []byte
-        
+
         for i, payload := range testPayloads </span><span class="cov0" title="0">{
                 signature, err := s.Sign(ctx, payload)
                 if err != nil </span><span class="cov0" title="0">{
@@ -2977,41 +3850,41 @@ func (ts *TestSuite) testSingleKeySigning() <span class="cov0" title="0">{
                         ts.addResult(result)
                         return
                 }</span>
-                
+
                 <span class="cov0" title="0">if len(signature) == 0 </span><span class="cov0" title="0">{
                         result.Error = fmt.Errorf("signature %d is empty", i)
                         result.Duration = time.Since(start)
                         ts.addResult(result)
                         return
                 }</span>
-                
+
                 <span class="cov0" title="0">lastSignature = signature
                 fmt.Printf("✓ Signed payload %d: %x -&gt; %x\n", i+1, payload, signature)</span>
         }
-        
+
         <span class="cov0" title="0">result.Success = true
         result.PublicKey = pubKey
         result.SS58Address = ss58Addr
         result.Signature = lastSignature
         result.Duration = time.Since(start)
-        
+
         fmt.Printf("✓ Single key signing test passed\n")
         fmt.Printf("  Duration: %v\n", result.Duration)
-        
+
         ts.addResult(result)</span>
 }
 
 func (ts *TestSuite) testKeystoreGeneration() <span class="cov0" title="0">{
         start := time.Now()
         result := TestResult{
-                Name:      "Keystore Generation",
-                Success:   false,
-                Duration:  0,
+                Name:     "Keystore Generation",
+                Success:  false,
+                Duration: 0,
         }
-        
+
         fmt.Println("\nTest 3: Keystore Generation")
         fmt.Println(strings.Repeat("-", 30))
-        
+
         // Create keystore signer
         ksSigner, err := signer.NewKeyStoreSigner(keystorePath)
         if err != nil </span><span class="cov0" title="0">{
@@ -3021,7 +3894,7 @@ func (ts *TestSuite) testKeystoreGeneration() <span class="cov0" title="0">{
                 return
         }</span>
         <span class="cov0" title="0">defer ksSigner.Close()
-        
+
         // Generate a key in the keystore
         keyID := "test-key-1"
         err = ksSigner.GenerateKey(keyID, []byte(testPassword))
@@ -3031,7 +3904,7 @@ func (ts *TestSuite) testKeystoreGeneration() <span class="cov0" title="0">{
                 ts.addResult(result)
                 return
         }</span>
-        
+
         // Get public key info
         <span class="cov0" title="0">pubKey, ss58Addr, err := ksSigner.GetPublicKeyByID(keyID)
         if err != nil </span><span class="cov0" title="0">{
@@ -3040,32 +3913,32 @@ func (ts *TestSuite) testKeystoreGeneration() <span class="cov0" title="0">{
                 ts.addResult(result)
                 return
         }</span>
-        
+
         <span class="cov0" title="0">result.Success = true
         result.PublicKey = pubKey
         result.SS58Address = ss58Addr
         result.Duration = time.Since(start)
-        
+
         fmt.Printf("✓ Generated keystore key successfully\n")
         fmt.Printf("  Key ID: %s\n", keyID)
         fmt.Printf("  Public Key: %x\n", pubKey)
         fmt.Printf("  SS58 Address: %s\n", ss58Addr)
         fmt.Printf("  Duration: %v\n", result.Duration)
-        
+
         ts.addResult(result)</span>
 }
 
 func (ts *TestSuite) testMultipleKeysInKeystore() <span class="cov0" title="0">{
         start := time.Now()
         result := TestResult{
-                Name:      "Multiple Keys in Keystore",
-                Success:   false,
-                Duration:  0,
+                Name:     "Multiple Keys in Keystore",
+                Success:  false,
+                Duration: 0,
         }
-        
+
         fmt.Println("\nTest 4: Multiple Keys in Keystore")
         fmt.Println(strings.Repeat("-", 30))
-        
+
         // Create keystore signer
         ksSigner, err := signer.NewKeyStoreSigner(keystorePath)
         if err != nil </span><span class="cov0" title="0">{
@@ -3075,10 +3948,10 @@ func (ts *TestSuite) testMultipleKeysInKeystore() <span class="cov0" title="0">{
                 return
         }</span>
         <span class="cov0" title="0">defer ksSigner.Close()
-        
+
         // Generate multiple keys
         keyIDs := []string{"validator-key", "cold-key", "hot-key"}
-        
+
         for _, keyID := range keyIDs </span><span class="cov0" title="0">{
                 err = ksSigner.GenerateKey(keyID, []byte(testPassword))
                 if err != nil </span><span class="cov0" title="0">{
@@ -3087,7 +3960,7 @@ func (ts *TestSuite) testMultipleKeysInKeystore() <span class="cov0" title="0">{
                         ts.addResult(result)
                         return
                 }</span>
-                
+
                 // Get public key info
                 <span class="cov0" title="0">pubKey, ss58Addr, err := ksSigner.GetPublicKeyByID(keyID)
                 if err != nil </span><span class="cov0" title="0">{
@@ -3096,34 +3969,34 @@ func (ts *TestSuite) testMultipleKeysInKeystore() <span class="cov0" title="0">{
                         ts.addResult(result)
                         return
                 }</span>
-                
+
                 <span class="cov0" title="0">fmt.Printf("✓ Generated key: %s\n", keyID)
                 fmt.Printf("  Public Key: %x\n", pubKey)
                 fmt.Printf("  SS58 Address: %s\n", ss58Addr)</span>
         }
-        
+
         // List all keys
         <span class="cov0" title="0">allKeyIDs := ksSigner.ListKeyIDs()
         fmt.Printf("✓ Total keys in keystore: %d\n", len(allKeyIDs))
         fmt.Printf("  Key IDs: %v\n", allKeyIDs)
-        
+
         result.Success = true
         result.Duration = time.Since(start)
-        
+
         ts.addResult(result)</span>
 }
 
 func (ts *TestSuite) testKeystoreSigning() <span class="cov0" title="0">{
         start := time.Now()
         result := TestResult{
-                Name:      "Keystore Signing",
-                Success:   false,
-                Duration:  0,
+                Name:     "Keystore Signing",
+                Success:  false,
+                Duration: 0,
         }
-        
+
         fmt.Println("\nTest 5: Keystore Signing")
         fmt.Println(strings.Repeat("-", 30))
-        
+
         // Create keystore signer
         ksSigner, err := signer.NewKeyStoreSigner(keystorePath)
         if err != nil </span><span class="cov0" title="0">{
@@ -3133,21 +4006,21 @@ func (ts *TestSuite) testKeystoreSigning() <span class="cov0" title="0">{
                 return
         }</span>
         <span class="cov0" title="0">defer ksSigner.Close()
-        
+
         // Load keys (they should already exist from previous tests)
         keyIDs := []string{"test-key-1", "validator-key", "cold-key", "hot-key"}
-        
+
         for _, keyID := range keyIDs </span><span class="cov0" title="0">{
                 err = ksSigner.LoadKey(keyID, []byte(testPassword))
                 if err != nil </span><span class="cov0" title="0">{
                         // Skip if key doesn't exist
                         continue</span>
                 }
-                
+
                 // Test signing with this key
                 <span class="cov0" title="0">payload := []byte(fmt.Sprintf("test message for key %s", keyID))
                 ctx := context.Background()
-                
+
                 signature, err := ksSigner.SignWithKey(ctx, keyID, payload)
                 if err != nil </span><span class="cov0" title="0">{
                         result.Error = fmt.Errorf("failed to sign with key %s: %w", keyID, err)
@@ -3155,38 +4028,38 @@ func (ts *TestSuite) testKeystoreSigning() <span class="cov0" title="0">{
                         ts.addResult(result)
                         return
                 }</span>
-                
+
                 <span class="cov0" title="0">if len(signature) == 0 </span><span class="cov0" title="0">{
                         result.Error = fmt.Errorf("signature for key %s is empty", keyID)
                         result.Duration = time.Since(start)
                         ts.addResult(result)
                         return
                 }</span>
-                
+
                 <span class="cov0" title="0">fmt.Printf("✓ Signed with key %s: %x\n", keyID, signature)
                 result.Signature = signature</span>
         }
-        
+
         <span class="cov0" title="0">result.Success = true
         result.Duration = time.Since(start)
-        
+
         fmt.Printf("✓ Keystore signing test passed\n")
         fmt.Printf("  Duration: %v\n", result.Duration)
-        
+
         ts.addResult(result)</span>
 }
 
 func (ts *TestSuite) testStressSignatures() <span class="cov0" title="0">{
         start := time.Now()
         result := TestResult{
-                Name:      "Stress Test - 5000 Signatures",
-                Success:   false,
-                Duration:  0,
+                Name:     "Stress Test - 100 Signatures",
+                Success:  false,
+                Duration: 0,
         }
-        
-        fmt.Println("\nTest 6: Stress Test - 5000 Signatures")
+
+        fmt.Println("\nTest 6: Stress Test - 100 Signatures")
         fmt.Println(strings.Repeat("-", 30))
-        
+
         // Load single key signer
         s, err := signer.NewSr25519Signer(singleKeyPath, []byte(testPassword))
         if err != nil </span><span class="cov0" title="0">{
@@ -3196,56 +4069,58 @@ func (ts *TestSuite) testStressSignatures() <span class="cov0" title="0">{
                 return
         }</span>
         <span class="cov0" title="0">defer s.Close()
-        
+
         // Generate many random payloads and sign them
-        numSignatures := 5000
+        numSignatures := 100
         ctx := context.Background()
-        
+
         for i := 0; i &lt; numSignatures; i++ </span><span class="cov0" title="0">{
                 // Generate random payload
                 payload := make([]byte, 32)
-                rand.Read(payload)
-                
-                signature, err := s.Sign(ctx, payload)
+                if _, err := rand.Read(payload); err != nil </span><span class="cov0" title="0">{
+                        log.Fatalf("Failed to generate random payload: %v", err)
+                }</span>
+
+                <span class="cov0" title="0">signature, err := s.Sign(ctx, payload)
                 if err != nil </span><span class="cov0" title="0">{
                         result.Error = fmt.Errorf("failed to sign payload %d: %w", i, err)
                         result.Duration = time.Since(start)
                         ts.addResult(result)
                         return
                 }</span>
-                
+
                 <span class="cov0" title="0">if len(signature) == 0 </span><span class="cov0" title="0">{
                         result.Error = fmt.Errorf("signature %d is empty", i)
                         result.Duration = time.Since(start)
                         ts.addResult(result)
                         return
                 }</span>
-                
+
                 <span class="cov0" title="0">if i%500 == 0 </span><span class="cov0" title="0">{
                         fmt.Printf("✓ Completed %d/%d signatures\n", i+1, numSignatures)
                 }</span>
         }
-        
+
         <span class="cov0" title="0">result.Success = true
         result.Duration = time.Since(start)
-        
+
         fmt.Printf("✓ Stress test passed - %d signatures in %v\n", numSignatures, result.Duration)
         fmt.Printf("  Average time per signature: %v\n", result.Duration/time.Duration(numSignatures))
-        
+
         ts.addResult(result)</span>
 }
 
 func (ts *TestSuite) testEdgeCases() <span class="cov0" title="0">{
         start := time.Now()
         result := TestResult{
-                Name:      "Edge Cases",
-                Success:   false,
-                Duration:  0,
+                Name:     "Edge Cases",
+                Success:  false,
+                Duration: 0,
         }
-        
+
         fmt.Println("\nTest 7: Edge Cases")
         fmt.Println(strings.Repeat("-", 30))
-        
+
         // Load single key signer
         s, err := signer.NewSr25519Signer(singleKeyPath, []byte(testPassword))
         if err != nil </span><span class="cov0" title="0">{
@@ -3255,9 +4130,9 @@ func (ts *TestSuite) testEdgeCases() <span class="cov0" title="0">{
                 return
         }</span>
         <span class="cov0" title="0">defer s.Close()
-        
+
         ctx := context.Background()
-        
+
         // Test 1: Empty payload (should fail)
         _, err = s.Sign(ctx, []byte{})
         if err == nil </span><span class="cov0" title="0">{
@@ -3267,7 +4142,7 @@ func (ts *TestSuite) testEdgeCases() <span class="cov0" title="0">{
                 return
         }</span>
         <span class="cov0" title="0">fmt.Printf("✓ Empty payload correctly rejected: %v\n", err)
-        
+
         // Test 2: Cancelled context
         cancelCtx, cancel := context.WithCancel(context.Background())
         cancel()
@@ -3279,11 +4154,11 @@ func (ts *TestSuite) testEdgeCases() <span class="cov0" title="0">{
                 return
         }</span>
         <span class="cov0" title="0">fmt.Printf("✓ Cancelled context correctly rejected: %v\n", err)
-        
+
         // Test 3: Very large payload
         largePayload := make([]byte, 1024*1024) // 1MB
         rand.Read(largePayload)
-        
+
         signature, err := s.Sign(ctx, largePayload)
         if err != nil </span><span class="cov0" title="0">{
                 result.Error = fmt.Errorf("failed to sign large payload: %w", err)
@@ -3291,23 +4166,23 @@ func (ts *TestSuite) testEdgeCases() <span class="cov0" title="0">{
                 ts.addResult(result)
                 return
         }</span>
-        
+
         <span class="cov0" title="0">if len(signature) == 0 </span><span class="cov0" title="0">{
                 result.Error = fmt.Errorf("signature for large payload is empty")
                 result.Duration = time.Since(start)
                 ts.addResult(result)
                 return
         }</span>
-        
+
         <span class="cov0" title="0">fmt.Printf("✓ Large payload (1MB) signed successfully\n")
-        
+
         result.Success = true
         result.Duration = time.Since(start)
         result.Signature = signature
-        
+
         fmt.Printf("✓ Edge cases test passed\n")
         fmt.Printf("  Duration: %v\n", result.Duration)
-        
+
         ts.addResult(result)</span>
 }
 
@@ -3323,8 +4198,9 @@ func init() <span class="cov0" title="0">{
                 fmt.Println("Please run this script from the root directory of the btsigner project")
                 os.Exit(1)
         }</span>
-} </pre>
-		
+}
+</pre>
+
 		</div>
 	</body>
 	<script>

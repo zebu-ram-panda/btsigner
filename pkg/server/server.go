@@ -70,9 +70,11 @@ func (s *Server) Run() error {
 		}
 
 		creds := credentials.NewTLS(&tls.Config{
-			Certificates: []tls.Certificate{tlsConfig.Cert},
-			ClientCAs:    tlsConfig.CACertPool,
-			MinVersion:   tls.VersionTLS12,
+			Certificates:     []tls.Certificate{tlsConfig.Cert},
+			ClientCAs:        tlsConfig.CACertPool,
+			MinVersion:       tlsConfig.MinVersion,
+			CipherSuites:     tlsConfig.CipherSuites,
+			CurvePreferences: tlsConfig.CurvePreferences,
 		})
 		opts = append(opts, grpc.Creds(creds))
 	}
