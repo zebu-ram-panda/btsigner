@@ -1,7 +1,6 @@
 package crypto
 
 import (
-	"crypto/subtle"
 	"runtime"
 )
 
@@ -38,9 +37,4 @@ func (s *SecureBytes) Zero() {
 		s.bytes[i] = 0
 	}
 	s.bytes = nil
-}
-
-// ConstantTimeCompare performs a constant-time comparison of two byte slices.
-func ConstantTimeCompare(a, b []byte) bool {
-	return subtle.ConstantTimeCompare(a, b) == 1
 }

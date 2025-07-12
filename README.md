@@ -1,5 +1,7 @@
 # btsigner
 
+[![Known Vulnerabilities](https://snyk.io/test/github/zebu-ram-panda/btsigner/badge.svg)](https://app.snyk.io/org/zebu-ram-panda/dashboard)
+
 A minimal, secure remote signer for Bittensor using sr25519 cryptography.
 
 ## Overview
@@ -8,12 +10,28 @@ btsigner keeps your sr25519 private key off your validator node, reducing the ri
 
 ## Features
 
-- Simple, focused design with minimal dependencies
-- Secure key management with encrypted storage
-- TLS/mTLS support for secure communication
-- Prometheus metrics for monitoring
-- Health check endpoint
-- Docker and Kubernetes ready
+- **Simple, focused design** with minimal dependencies
+- **Secure key management**
+  - Encrypted storage with strong password-based encryption
+  - Multiple key management options (single key or keystore with multiple keys)
+  - Import keys from Bittensor wallet files
+  - Key zeroing in memory when no longer needed
+- **Multi-key support**
+  - Support for managing up to 256 keys in a keystore
+  - Ability to select keys by ID for signing operations
+  - Default key selection for simplified operations
+- **TLS/mTLS support** for secure communication
+  - Configurable cipher suites and TLS versions
+  - Optional client certificate authentication
+- **gRPC API** for efficient remote signing
+  - Get public keys and addresses
+  - Sign extrinsics with specific keys
+  - Check server health
+
+- **Configurable logging** with JSON or console formats
+- **CLI client** for testing and manual operations
+- **Comprehensive test suite** with integration tests
+- **Docker and Kubernetes ready**
 
 ## Quick Start
 
@@ -25,8 +43,14 @@ make build
 
 ### Generating a key
 
+#### Single key mode
 ```bash
 ./bin/btsigner --genkey --key ./key.json
+```
+
+#### Keystore mode (multiple keys)
+```bash
+./bin/btsigner --genkey --keystore ./keystore --key-id mykey1
 ```
 
 ### Running the server
@@ -44,8 +68,14 @@ make build
 # Sign a payload
 ./bin/btclient --sign 0x68656c6c6f20776f726c64
 
+# Sign with a specific key ID
+./bin/btclient --sign 0x68656c6c6f20776f726c64 --key-id mykey1
+
 # Check server health
 ./bin/btclient --health
+
+# Use TLS
+./bin/btclient --tls --ca ./certs/ca.crt --get-public-key
 ```
 
 ## Configuration
@@ -54,26 +84,75 @@ Example configuration file (config.yaml):
 
 ```yaml
 server:
-  address: ":50051"
+  address: ":50051"  # gRPC server address
 
+# Single key mode
 key:
   path: "key.json"
   type: "file"
+
+# OR keystore mode for multiple keys
+keystore:
+  path: "keystore"
 
 tls:
   enabled: true
   cert_path: "certs/server.crt"
   key_path: "certs/server.key"
-  client_auth: true
+  client_auth: true  # Enable client certificate authentication
   ca_path: "certs/ca.crt"
+  min_version: "1.2"
+  cipher_suites:
+    - "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+    - "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
 
 metrics:
   enabled: true
   address: ":9090"
 
 log:
-  level: "info"
-  format: "json"
+  level: "info"  # debug, info, warn, error
+  format: "json"  # json, console
+```
+
+## Advanced Usage
+
+### Importing Keys from Bittensor Wallet
+
+You can import existing keys from a Bittensor wallet:
+
+```bash
+./bin/btsigner --import --coldkey /path/to/coldkey --coldkeypub /path/to/coldkeypub.txt --keystore ./keystore --key-id imported_key
+```
+
+### Working with Multiple Keys
+
+List available keys in a keystore:
+
+```bash
+./bin/btsigner --keystore ./keystore
+```
+
+Load a specific key:
+
+```bash
+./bin/btsigner --keystore ./keystore --key-id mykey1
+```
+
+### Checking Keys
+
+Verify a key without starting the server:
+
+```bash
+./bin/btsigner --check-key --key ./key.json
+```
+
+### Securing Communications
+
+For production use, always enable TLS:
+
+```bash
+./bin/btsigner --config config.yaml  # with TLS enabled in config
 ```
 
 ## Integration with Bittensor
@@ -86,10 +165,8 @@ To use btsigner with Bittensor, configure your validator to use the remote signe
 - Use TLS with client authentication
 - Restrict network access to the signer
 - Consider using a hardware security module (HSM) for key storage
-
-## License
-
-MIT
+- Regularly rotate keys and certificates
+- Monitor logs and metrics for suspicious activity
 
 ## Testing Suite
 
@@ -136,3 +213,7 @@ make test-coverage
 # Generate all test reports for CI
 make test-ci
 ```
+
+## License
+
+MIT
