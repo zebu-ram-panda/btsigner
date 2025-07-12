@@ -2,7 +2,9 @@ package signer
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"sync"
 	"testing"
 )
 
@@ -143,8 +145,14 @@ func TestKeyStoreSigner(t *testing.T) {
 			t.Fatalf("Failed to load default key: %v", err)
 		}
 
-		// Try with wrong password
+		// Try with wrong password - first unload the key so password validation is triggered
+		if err := signer.UnloadKey(key2ID); err != nil {
+			t.Fatalf("Failed to unload key before testing wrong password: %v", err)
+		}
 		err = signer.LoadKey(key2ID, []byte("wrong_password"))
+		if err == nil {
+			t.Error("Expected error when loading key with wrong password, got nil")
+		}
 		// We only expect this to not succeed, but the specific error might vary
 		// depending on the crypto implementation
 	})
@@ -244,5 +252,196 @@ func TestKeyStoreSigner(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to close signer: %v", err)
 		}
+	})
+}
+
+// TestKeyStoreSignerConcurrentAccess tests concurrent access to KeyStoreSigner
+func TestKeyStoreSignerConcurrentAccess(t *testing.T) {
+	// Create a temporary directory for testing
+	tmpDir, err := os.MkdirTemp("", "keystore-concurrent-test")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Create keystore signer
+	signer, err := NewKeyStoreSigner(tmpDir)
+	if err != nil {
+		t.Fatalf("Failed to create keystore signer: %v", err)
+	}
+	defer signer.Close()
+
+	// Generate multiple keys for testing
+	numKeys := 5
+	keyIDs := make([]string, numKeys)
+	password := []byte("test_password")
+
+	for i := 0; i < numKeys; i++ {
+		keyID := fmt.Sprintf("test_key_%d", i)
+		keyIDs[i] = keyID
+		
+		err := signer.GenerateKey(keyID, password)
+		if err != nil {
+			t.Fatalf("Failed to generate key %s: %v", keyID, err)
+		}
+	}
+
+	// Load all keys
+	for _, keyID := range keyIDs {
+		err := signer.LoadKey(keyID, password)
+		if err != nil {
+			t.Fatalf("Failed to load key %s: %v", keyID, err)
+		}
+	}
+
+	// Test concurrent access to defaultKeyID
+	const numGoroutines = 20
+	const numOperations = 100
+
+	// Test concurrent SetDefaultKeyID and DefaultKeyID
+	t.Run("ConcurrentDefaultKeyAccess", func(t *testing.T) {
+		var wg sync.WaitGroup
+		
+		// Start multiple goroutines that set default key
+		for i := 0; i < numGoroutines; i++ {
+			wg.Add(1)
+			go func(goroutineID int) {
+				defer wg.Done()
+				
+				for j := 0; j < numOperations; j++ {
+					keyID := keyIDs[j%len(keyIDs)]
+					signer.SetDefaultKeyID(keyID)
+					
+					// Read the default key ID
+					defaultKeyID := signer.DefaultKeyID()
+					if defaultKeyID == "" {
+						t.Errorf("Default key ID should not be empty")
+					}
+					
+					// Verify it's one of our keys
+					found := false
+					for _, validKeyID := range keyIDs {
+						if defaultKeyID == validKeyID {
+							found = true
+							break
+						}
+					}
+					if !found {
+						t.Errorf("Default key ID %s is not one of our keys", defaultKeyID)
+					}
+				}
+			}(i)
+		}
+		
+		wg.Wait()
+	})
+
+	// Test concurrent signing operations
+	t.Run("ConcurrentSigning", func(t *testing.T) {
+		var wg sync.WaitGroup
+		ctx := context.Background()
+		payload := []byte("test message for concurrent signing")
+		
+		// Start multiple goroutines that sign concurrently
+		for i := 0; i < numGoroutines; i++ {
+			wg.Add(1)
+			go func(goroutineID int) {
+				defer wg.Done()
+				
+				for j := 0; j < numOperations; j++ {
+					keyID := keyIDs[j%len(keyIDs)]
+					
+					// Sign with specific key
+					signature, err := signer.SignWithKey(ctx, keyID, payload)
+					if err != nil {
+						t.Errorf("Failed to sign with key %s: %v", keyID, err)
+						return
+					}
+					
+					if len(signature) == 0 {
+						t.Errorf("Signature should not be empty for key %s", keyID)
+					}
+				}
+			}(i)
+		}
+		
+		wg.Wait()
+	})
+
+	// Test concurrent sign with default key
+	t.Run("ConcurrentSignWithDefault", func(t *testing.T) {
+		var wg sync.WaitGroup
+		ctx := context.Background()
+		payload := []byte("test message for concurrent default signing")
+		
+		// Set a default key
+		signer.SetDefaultKeyID(keyIDs[0])
+		
+		// Start multiple goroutines that sign with default key
+		for i := 0; i < numGoroutines; i++ {
+			wg.Add(1)
+			go func(goroutineID int) {
+				defer wg.Done()
+				
+				for j := 0; j < numOperations; j++ {
+					signature, err := signer.Sign(ctx, payload)
+					if err != nil {
+						t.Errorf("Failed to sign with default key: %v", err)
+						return
+					}
+					
+					if len(signature) == 0 {
+						t.Errorf("Signature should not be empty")
+					}
+				}
+			}(i)
+		}
+		
+		wg.Wait()
+	})
+
+	// Test mixed concurrent operations
+	t.Run("MixedConcurrentOperations", func(t *testing.T) {
+		var wg sync.WaitGroup
+		ctx := context.Background()
+		payload := []byte("test message for mixed operations")
+		
+		// Start goroutines that do different operations
+		for i := 0; i < numGoroutines; i++ {
+			wg.Add(1)
+			go func(goroutineID int) {
+				defer wg.Done()
+				
+				for j := 0; j < numOperations; j++ {
+					keyID := keyIDs[j%len(keyIDs)]
+					
+					switch j % 4 {
+					case 0:
+						// Set default key
+						signer.SetDefaultKeyID(keyID)
+					case 1:
+						// Get default key
+						defaultKeyID := signer.DefaultKeyID()
+						if defaultKeyID == "" {
+							t.Errorf("Default key ID should not be empty")
+						}
+					case 2:
+						// Sign with specific key
+						_, err := signer.SignWithKey(ctx, keyID, payload)
+						if err != nil {
+							t.Errorf("Failed to sign with key %s: %v", keyID, err)
+						}
+					case 3:
+						// Sign with default key
+						_, err := signer.Sign(ctx, payload)
+						if err != nil {
+							t.Errorf("Failed to sign with default key: %v", err)
+						}
+					}
+				}
+			}(i)
+		}
+		
+		wg.Wait()
 	})
 }
