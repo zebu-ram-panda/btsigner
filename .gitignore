@@ -18,3 +18,4 @@ certs/
 gosec-results.json
 server.log
 server.pid
+coverave.*
