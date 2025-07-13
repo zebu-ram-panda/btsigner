@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -41,14 +42,14 @@ func main() {
 	_ = logger.Sync()
 
 	// Load configuration
-	cfg, err := config.LoadConfig(*configPath)
+	cfg, err := config.LoadConfig(filepath.Clean(*configPath))
 	if err != nil {
 		logger.Fatal("Failed to load configuration", zap.Error(err))
 	}
 
 	// Override key path if specified
 	if *keyPath != "" {
-		cfg.Key.Path = *keyPath
+		cfg.Key.Path = filepath.Clean(*keyPath)
 	}
 
 	var signerImpl signer.Signer
@@ -56,7 +57,7 @@ func main() {
 	// Check if using keystore
 	if *keyStorePath != "" {
 		// Use KeyStoreSigner for multi-key support
-		keyStoreSigner, err := signer.NewKeyStoreSigner(*keyStorePath)
+		keyStoreSigner, err := signer.NewKeyStoreSigner(filepath.Clean(*keyStorePath))
 		if err != nil {
 			logger.Fatal("Failed to create key store signer", zap.Error(err))
 		}
@@ -134,13 +135,17 @@ func main() {
 			var coldkeyPassword []byte
 			var keystorePassword []byte
 
+			// Sanitize paths to prevent path traversal
+			sanitizedColdkeyPath := filepath.Clean(*coldkeyPath)
+			sanitizedColdkeyPubPath := filepath.Clean(*coldkeyPubPath)
+
 			// Check for password in environment variable (for testing)
 			if envPassword := os.Getenv("BTSIGNER_PASSWORD"); envPassword != "" {
 				coldkeyPassword = []byte(envPassword)
 				keystorePassword = []byte(envPassword)
 			} else {
 				// Check if the coldkey is encrypted
-				coldkeyData, err := os.ReadFile(*coldkeyPath)
+				coldkeyData, err := os.ReadFile(sanitizedColdkeyPath)
 				if err != nil {
 					logger.Fatal("Failed to read coldkey file", zap.Error(err))
 				}
@@ -168,12 +173,13 @@ func main() {
 				fmt.Println()
 			}
 
-			err = keyStoreSigner.ImportKey(*keyID, *coldkeyPath, *coldkeyPubPath, coldkeyPassword, keystorePassword)
+			// Import the key using sanitized paths
+			err = keyStoreSigner.ImportKey(*keyID, sanitizedColdkeyPath, sanitizedColdkeyPubPath, coldkeyPassword, keystorePassword)
 			if err != nil {
 				logger.Fatal("Failed to import key",
 					zap.String("key_id", *keyID),
-					zap.String("coldkey_path", *coldkeyPath),
-					zap.String("coldkeypub_path", *coldkeyPubPath),
+					zap.String("coldkey_path", sanitizedColdkeyPath),
+					zap.String("coldkeypub_path", sanitizedColdkeyPubPath),
 					zap.Error(err))
 			}
 
@@ -186,8 +192,8 @@ func main() {
 
 			logger.Info("Imported key",
 				zap.String("key_id", *keyID),
-				zap.String("coldkey_path", *coldkeyPath),
-				zap.String("coldkeypub_path", *coldkeyPubPath),
+				zap.String("coldkey_path", sanitizedColdkeyPath),
+				zap.String("coldkeypub_path", sanitizedColdkeyPubPath),
 				zap.String("ss58_address", ss58Addr))
 
 			return

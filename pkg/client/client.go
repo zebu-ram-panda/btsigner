@@ -83,7 +83,7 @@ func NewSignerClient(opts *ClientOptions) (*SignerClient, error) {
 		dialOpts = append(dialOpts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}
 
-	conn, err := grpc.NewClient(opts.Address, dialOpts...)
+	conn, err := grpc.Dial(opts.Address, dialOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial server: %w", err)
 	}
