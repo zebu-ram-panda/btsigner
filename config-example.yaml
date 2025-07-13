@@ -141,10 +141,6 @@ tls:
   client_auth: false
   ca_path: "certs/ca.crt"
   min_version: "1.2"
-    cipher_suites: [
-      "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
-      "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
-    ]
   cipher_suites:
     - "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
     - "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"

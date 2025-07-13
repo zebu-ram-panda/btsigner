@@ -168,6 +168,81 @@ To use btsigner with Bittensor, configure your validator to use the remote signe
 - Regularly rotate keys and certificates
 - Monitor logs and metrics for suspicious activity
 
+## Docker Usage
+
+btsigner provides Docker support for both the server and client components.
+
+### Setup Environment Variables
+
+Copy the example environment file and customize it:
+
+```bash
+cp .env.example .env
+# Edit .env with your preferred text editor
+```
+
+Important variables to set:
+- `BTSIGNER_PASSWORD`: Password for your key file (required for non-interactive use)
+- `KEY_PATH`: Path to your key file inside the container
+
+### Running with Docker Compose
+
+#### Starting the Server
+
+```bash
+docker-compose up -d btsigner
+```
+
+#### Checking Server Health
+
+```bash
+docker-compose run --rm btclient --address=btsigner:50051 --health
+```
+
+#### Getting the Public Key
+
+```bash
+docker-compose run --rm btclient --address=btsigner:50051 --get-public-key
+```
+
+#### Signing a Message
+
+```bash
+docker-compose run --rm btclient --address=btsigner:50051 --sign 0x68656c6c6f20776f726c64
+```
+
+#### Building Custom Images
+
+```bash
+docker-compose build
+```
+
+#### Generating a Key in Docker
+
+```bash
+# Create a keystore directory first
+mkdir -p keystore
+
+# Generate a key
+docker-compose run --rm -e BTSIGNER_PASSWORD=your-password btsigner --genkey --key /app/keystore/key.json
+```
+
+### Running with Docker Directly
+
+#### Server
+
+```bash
+docker build -t bittensor/btsigner:latest --target server .
+docker run -d -p 50051:50051 -p 9090:9090 -v ./keystore:/app/keystore -v ./config.yaml:/app/config.yaml:ro -e BTSIGNER_PASSWORD=your-password bittensor/btsigner:latest
+```
+
+#### Client
+
+```bash
+docker build -t bittensor/btclient:latest --target client .
+docker run --rm bittensor/btclient:latest --address=host.docker.internal:50051 --health
+```
+
 ## Testing Suite
 
 btsigner includes a comprehensive testing suite to verify code quality, identify security issues, and ensure functionality. The following test targets are available via make:

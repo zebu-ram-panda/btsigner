@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  init:
+    build:
+      context: .
+      target: server
+    image: bittensor/btsigner:latest
+    volumes:
+      - ./keystore:/app/keystore
+      - ./config.yaml:/app/config.yaml:ro
+    environment:
+      BTSIGNER_PASSWORD: password123
+    command:
+      - "--genkey"
+      - "--key"
+      - "/app/keystore/key.json"
+      - "--config"
+      - "/app/config.yaml"
+
+  btsigner:
+    build:
+      context: .
+      target: server
+    image: bittensor/btsigner:latest
+    container_name: btsigner
+    restart: unless-stopped
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    volumes:
+      - ./keystore:/app/keystore
+      - ./config.yaml:/app/config.yaml:ro
+      - ./certs:/app/certs:ro
+    ports:
+      - "50051:50051"
+      - "9090:9090"
+    environment:
+      BTSIGNER_PASSWORD: password123
+      KEY_PATH: /app/keystore/key.json
+      SERVER_ADDRESS: 0.0.0.0:50051
+    command:
+      - "--config"
+      - "/app/config.yaml"
+      - "--key"
+      - "/app/keystore/key.json"
+
+  btclient:
+    build:
+      context: .
+      target: client
+    image: bittensor/btclient:latest
+    container_name: btclient
+    depends_on:
+      - btsigner
+    stdin_open: true
+    tty: true
+    environment:
+      BTSIGNER_PASSWORD: password123
+    command:
+      - "--address=btsigner:50051"
+      - "--health"
+
+networks:
+  default:
+    name: btsigner-network
+    driver: bridge 
