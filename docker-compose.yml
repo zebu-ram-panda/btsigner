@@ -57,9 +57,25 @@ services:
     tty: true
     environment:
       BTSIGNER_PASSWORD: password123
+    # Use the health check command
     command:
       - "--address=btsigner:50051"
       - "--health"
+    # For testing specific operations, use docker-compose run
+    # Example: docker-compose run --rm btclient-test --address=btsigner:50051 --sign --message="test"
+
+  # Additional client service for testing specific operations
+  btclient-test:
+    build:
+      context: .
+      target: client
+    image: bittensor/btclient:latest
+    profiles: ["test"]
+    depends_on:
+      - btsigner
+    environment:
+      BTSIGNER_PASSWORD: password123
+    # This service is meant to be run with docker-compose run --rm btclient-test <args>
 
 networks:
   default:
